@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Adorê - Painel Administrativo</title>
+    <style>
+        :root {
+            --primary-color: #d4af37;
+            --primary-hover: #b89728;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #181818;
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            background: var(--bg-color); 
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR / MENU SANDUÍCHE */
+        sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
+            position: relative;
+            transition: transform 0.3s ease;
+            z-index: 10;
+        }
+
+        sidebar.collapsed {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+        }
+
+        .hamburger-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #222;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 20;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        .hamburger-btn:hover {
+            background: #333;
+            border-color: var(--primary-color);
+        }
+
+        .sidebar-brand {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .sidebar-brand video {
+            width: 80px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        .sidebar-brand h2 {
+            font-size: 14px;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+            margin: 6px 0 0 0;
+            text-transform: uppercase;
+        }
+
+        .nav-section {
+            margin-bottom: 15px;
+        }
+        .nav-section h4 {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .filter-btn, .custom-action-btn {
+            display: block;
+            width: 100%;
+            background: transparent;
+            color: var(--text-main);
+            border: 1px solid transparent;
+            text-align: left;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 4px;
+            transition: 0.2s;
+        }
+        .filter-btn:hover, .filter-btn.active, .custom-action-btn:hover {
+            background: #2a2a2a;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .admin-toggle-header {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            padding: 6px 0;
+            border-top: 1px solid var(--border-color);
+            margin-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .admin-toggle-header:hover { color: var(--primary-color); }
+
+        .admin-controls {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            margin-top: 5px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .admin-controls.show {
+            display: block;
+        }
+        .admin-controls label {
+            font-size: 10px;
+            display: block;
+            margin-top: 5px;
+            color: var(--text-muted);
+        }
+        .admin-controls input, .admin-controls select {
+            width: 100%;
+            padding: 5px;
+            font-size: 11px;
+            margin-top: 2px;
+            background: #111;
+            border: 1px solid #444;
+            color: white;
+            box-sizing: border-box;
+            border-radius: 4px;
+        }
+
+        main {
+            flex: 1;
+            padding: 25px;
+            padding-left: 65px;
+            overflow-y: auto;
+            box-sizing: border-box;
+            transition: padding-left 0.3s ease;
+        }
+        main.full {
+            padding-left: 25px;
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
+            margin-bottom: 20px; 
+            border: 1px solid var(--border-color);
+        }
+
+        .hidden { display: none !important; }
+
+        form { display: flex; flex-direction: column; gap: 10px; }
+        
+        label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        input, button, select { 
+            padding: 9px 12px; 
+            font-size: 13px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            background: #2a2a2a;
+            color: white;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus { border-color: var(--primary-color); }
+
+        button.action-btn { 
+            background: var(--primary-color); 
+            color: #121212; 
+            border: none; 
+            cursor: pointer; 
+            font-weight: bold; 
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-size: 12px; 
+        }
+        button.action-btn:hover { background: var(--primary-hover); }
+
+        .calc-box { 
+            background: #252525; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid var(--border-color); 
+            margin-bottom: 15px; 
+        }
+        .calc-box h3 {
+            margin-top: 0;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+        .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+        .calc-row div { display: flex; flex-direction: column; gap: 4px; }
+        
+        .result-text {
+            margin-top: 10px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px dashed var(--border-color);
+            padding-top: 8px;
+        }
+        #precoSugerido { color: var(--primary-color); font-size: 16px; font-weight: bold; }
+
+        #resultado { 
+            margin-top: 10px; 
+            background: #2a2a2a; 
+            padding: 10px; 
+            border-radius: 6px;
+            white-space: pre-wrap; 
+            font-size: 11px; 
+            font-family: monospace;
+            color: #ddd;
+        }
+
+        .logout-btn { 
+            background: #d9534f; 
+            color: white;
+            padding: 8px; 
+            font-size: 11px;
+            margin-top: auto;
+        }
+        .logout-btn:hover { background: #c9302c; }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .product-card {
+            background: #252525;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .product-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #111;
+        }
+        .product-info h4 { margin: 0; font-size: 14px; color: var(--text-main); }
+        .product-info p { margin: 2px 0; font-size: 11px; color: var(--text-muted); }
+        .product-info .price { color: var(--primary-color); font-weight: bold; font-size: 13px; }
+        .badge { background: #333; color: var(--primary-color); padding: 2px 6px; border-radius: 4px; font-size: 9px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <button class="hamburger-btn" id="hamburgerToggle">☰</button>
+
+    <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
+        <div class="card" style="text-align: center;">
+            <div style="width: 180px; height: 120px; margin: 0 auto 15px auto; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <video id="logoVideo" style="width:100%; height:100%; object-fit:cover;" src="animação logo.mp4" muted playsinline></video>
+            </div>
+            <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
+            <form id="loginForm">
+                <label>E-mail</label>
+                <input type="email" id="loginEmail" name="email_admin" autocomplete="off" required value="admin@adore.com">
+                
+                <label>Senha</label>
+                <input type="password" id="loginSenha" name="senha_admin" autocomplete="new-password" required value="123456">
+                
+                <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px;">Entrar no Painel</button>
+            </form>
+        </div>
+    </div>
+
+    <sidebar id="sidebarNav" class="hidden">
+        <div class="sidebar-brand" style="margin-top: 30px;">
+            <video src="animação logo.mp4" muted autoplay loop style="width: 80px; height: 50px; border-radius: 4px;"></video>
+            <h2>Adorê Adm</h2>
+        </div>
+
+        <div class="admin-toggle-header" id="adminToggleHeader">
+            <span>⚙️ Customizar Layout</span>
+            <span>▼</span>
+        </div>
+        <div class="admin-controls" id="adminControlsPanel">
+            <label>Cor Principal</label>
+            <input type="color" id="pickerPrimary" value="#d4af37">
+            
+            <label>Estilo do Cartão</label>
+            <select id="selectLayoutCard">
+                <option value="solid">Sólido Escuro</option>
+                <option value="bordered">Com Borda Realçada</option>
+                <option value="minimal">Minimalista</option>
+            </select>
+
+            <label>Novo Botão no Menu</label>
+            <input type="text" id="novoBotaoNome" placeholder="Nome do Botão">
+            <input type="text" id="novoBotaoAcao" placeholder="Link ou URL">
+            <button type="button" class="action-btn" id="btnAdicionarBotao" style="margin-top: 5px; width: 100%; padding: 4px; font-size: 10px;">+ Inserir Botão</button>
+        </div>
+
+        <div class="nav-section">
+            <h4>Categorias</h4>
+            <div id="categoriasFiltrosContainer">
+                <button class="filter-btn active" data-cat="todos">📂 Todas as Peças</button>
+            </div>
+        </div>
+
+        <div class="nav-section" id="botoesExtrasContainer">
+            <h4>Atalhos</h4>
+        </div>
+
+        <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
+    </sidebar>
+
+    <main id="mainContent" class="hidden full">
+        <div class="card calc-box">
+            <h3>Calculadora Automática (Base: Peso & 50% Lucro)</h3>
+            <div class="calc-row">
+                <div>
+                    <label>Peso da Peça (g)</label>
+                    <input type="number" id="calcPeso" value="50">
+                </div>
+                <div>
+                    <label>Preço do Kg (R$)</label>
+                    <input type="number" step="0.01" id="calcPrecoKg" value="90.00">
+                </div>
+            </div>
+            <div class="calc-row">
+                <div>
+                    <label>Tempo (Horas)</label>
+                    <input type="number" step="0.1" id="calcHoras" value="4.5">
+                </div>
+                <div>
+                    <label>Custo Máquina/h (R$)</label>
+                    <input type="number" step="0.01" id="calcCustoHora" value="2.50">
+                </div>
+            </div>
+            <div class="calc-row">
+                <div>
+                    <label>Margem de Lucro (%)</label>
+                    <input type="number" id="calcLucro" value="50">
+                </div>
+                <div style="justify-content: flex-end;">
+                    <label>&nbsp;</label>
+                    <button type="button" class="action-btn" id="btnCalcular">Calcular Preço</button>
+                </div>
+            </div>
+            <div class="result-text">
+                <span>Preço Base Sugerido: <strong id="precoSugerido">R$ 0,00</strong></span>
+                <button type="button" class="action-btn" id="btnUsarPreco" style="padding: 6px 10px; background: #2e7d32; color: white;">Aplicar no Preço</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-top: 0; color: var(--primary-color); font-size: 15px; margin-bottom: 10px;">Cadastrar Novo Produto (Auto-Nome por Arquivo)</h3>
+            <form id="produtoForm">
+                <div class="calc-row">
+                    <div>
+                        <label>Nome do Produto (Preenchido por qualquer arquivo enviado)</label>
+                        <input type="text" id="nome" name="nome" placeholder="Gerado automaticamente ao anexar arquivos">
+                    </div>
+                    <div>
+                        <label>Categoria (Integrada Automaticamente ao Banco)</label>
+                        <input type="text" id="categoriaInput" name="categoria" list="listaCategorias" placeholder="Ex: Decoração ou Digite Nova">
+                        <datalist id="listaCategorias">
+                            <option value="Decoração"></option>
+                            <option value="Utilidades"></option>
+                            <option value="Acessórios"></option>
+                            <option value="Geral"></option>
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="calc-row">
+                    <div>
+                        <label>Preço de Venda (R$)</label>
+                        <input type="number" step="0.01" id="preco" name="preco" required>
+                    </div>
+                    <div>
+                        <label>Link Externo / Referência (URL)</label>
+                        <input type="text" id="link_externo" name="link_externo" placeholder="https://...">
+                    </div>
+                </div>
+
+                <div class="calc-row">
+                    <div>
+                        <label>Imagem de Capa (JPG/PNG)</label>
+                        <input type="file" id="imagem" name="imagem" accept="image/*">
+                    </div>
+                    <div>
+                        <label>Arquivo 3D (.STL)</label>
+                        <input type="file" id="stl" name="stl" accept=".stl">
+                    </div>
+                </div>
+
+                <div class="calc-row">
+                    <div>
+                        <label>Arquivo Extra (.GCODE/.ZIP)</label>
+                        <input type="file" id="extra" name="extra" accept=".gcode,.zip,.rar,.pdf">
+                    </div>
+                </div>
+
+                <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Salvar no Supabase</button>
+            </form>
+            <div id="resultado">Aguardando envio...</div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="color: var(--primary-color); margin: 0; font-size: 15px;" id="tituloVitrine">Vitrine • Todas as Peças</h3>
+                <button type="button" class="action-btn" id="btnAtualizarLista" style="padding: 5px 8px; font-size: 10px;">Atualizar</button>
+            </div>
+            <div id="produtosLista" class="products-grid">
+                <p style="color: var(--text-muted); font-size: 12px;">Carregando...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = "https://adore-api-backend.onrender.com";
+
+        const video = document.getElementById('logoVideo');
+        window.addEventListener('DOMContentLoaded', () => {
+            video.currentTime = 0;
+            video.pause();
+        });
+
+        const loginSection = document.getElementById('loginSection');
+        const sidebarNav = document.getElementById('sidebarNav');
+        const mainContent = document.getElementById('mainContent');
+        const hamburgerToggle = document.getElementById('hamburgerToggle');
+        let categoriaAtual = 'todos';
+
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            video.currentTime = 0;
+            video.play();
+            setTimeout(() => {
+                loginSection.classList.add('hidden');
+                sidebarNav.classList.remove('hidden');
+                sidebarNav.classList.add('collapsed');
+                mainContent.classList.remove('hidden');
+                mainContent.classList.add('full');
+                carregarCategoriasESincronizar();
+                carregarProdutos(categoriaAtual);
+            }, 1200);
+        });
+
+        hamburgerToggle.addEventListener('click', () => {
+            sidebarNav.classList.toggle('collapsed');
+            mainContent.classList.toggle('full');
+        });
+
+        document.getElementById('adminToggleHeader').addEventListener('click', () => {
+            const panel = document.getElementById('adminControlsPanel');
+            panel.classList.toggle('show');
+        });
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            sidebarNav.classList.add('hidden');
+            mainContent.classList.add('hidden');
+            loginSection.classList.remove('hidden');
+            video.currentTime = 0;
+            video.pause();
+        });
+
+        document.getElementById('pickerPrimary').addEventListener('input', (e) => {
+            const cor = e.target.value;
+            document.documentElement.style.setProperty('--primary-color', cor);
+            document.documentElement.style.setProperty('--primary-hover', cor);
+        });
+
+        document.getElementById('selectLayoutCard').addEventListener('change', (e) => {
+            window.estiloCartaoAtual = e.target.value;
+            carregarProdutos(categoriaAtual);
+        });
+
+        document.getElementById('btnAdicionarBotao').addEventListener('click', () => {
+            const nome = document.getElementById('novoBotaoNome').value.trim();
+            const acao = document.getElementById('novoBotaoAcao').value.trim();
+            if(!nome || !acao) {
+                alert('Preencha o nome e o link do botão!');
+                return;
+            }
+
+            const container = document.getElementById('botoesExtrasContainer');
+            const btn = document.createElement('a');
+            btn.href = acao;
+            btn.target = "_blank";
+            btn.className = 'custom-action-btn';
+            btn.style.textDecoration = 'none';
+            btn.innerText = `🔗 ${nome}`;
+            container.appendChild(btn);
+
+            document.getElementById('novoBotaoNome').value = '';
+            document.getElementById('novoBotaoAcao').value = '';
+        });
+
+        ['imagem', 'stl', 'extra'].forEach(id => {
+            document.getElementById(id).addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const nomeInput = document.getElementById('nome');
+                    const nomeLimpo = file.name.replace(/\.[^/.]+$/, "");
+                    if (!nomeInput.value) {
+                        nomeInput.value = nomeLimpo;
+                    }
+                }
+            });
+        });
+
+        document.getElementById('btnCalcular').addEventListener('click', () => {
+            const peso = parseFloat(document.getElementById('calcPeso').value) || 0;
+            const precoKg = parseFloat(document.getElementById('calcPrecoKg').value) || 0;
+            const horas = parseFloat(document.getElementById('calcHoras').value) || 0;
+            const custoHora = parseFloat(document.getElementById('calcCustoHora').value) || 0;
+            const lucroPercentual = parseFloat(document.getElementById('calcLucro').value) || 50;
+
+            const custoFilamento = (peso / 1000) * precoKg;
+            const custoEnergia = horas * custoHora;
+            const custoTotal = custoFilamento + custoEnergia;
+            const precoFinal = custoTotal * (1 + (lucroPercentual / 100));
+
+            document.getElementById('precoSugerido').innerText = `R$ ${precoFinal.toFixed(2)}`;
+            window.precoCalculado = precoFinal.toFixed(2);
+        });
+
+        document.getElementById('btnUsarPreco').addEventListener('click', () => {
+            if (window.precoCalculado) {
+                document.getElementById('preco').value = window.precoCalculado;
+            } else {
+                alert('Faça o cálculo primeiro!');
+            }
+        });
+
+        async function excluirProduto(id) {
+            if(!confirm("Tens a certeza que pretendes excluir este produto?")) return;
+            try {
+                const res = await fetch(`${API_URL}/produtos/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if(data.sucesso) {
+                    carregarCategoriasESincronizar();
+                    carregarProdutos(categoriaAtual);
+                } else {
+                    alert("Erro ao excluir: " + data.mensagem);
+                }
+            } catch(err) {
+                alert("Erro de conexão ao tentar excluir.");
+            }
+        }
+
+        async function carregarCategoriasESincronizar() {
+            try {
+                const res = await fetch(`${API_URL}/categorias`);
+                const cats = await res.json();
+
+                const containerFiltros = document.getElementById('categoriasFiltrosContainer');
+                const datalist = document.getElementById('listaCategorias');
+                
+                containerFiltros.innerHTML = '<button class="filter-btn active" data-cat="todos">📂 Todas as Peças</button>';
+                datalist.innerHTML = '';
+
+                const padroes = ['Decoração', 'Utilidades', 'Acessórios', 'Geral'];
+                const todasCats = Array.from(new Set([...padroes, ...cats]));
+
+                todasCats.forEach(cat => {
+                    const b = document.createElement('button');
+                    b.className = 'filter-btn';
+                    b.setAttribute('data-cat', cat);
+                    b.innerText = `📁 ${cat}`;
+                    b.onclick = () => {
+                        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                        b.classList.add('active');
+                        categoriaAtual = cat;
+                        document.getElementById('tituloVitrine').innerText = `Vitrine • ${cat}`;
+                        carregarProdutos(cat);
+                    };
+                    containerFiltros.appendChild(b);
+
+                    const opt = document.createElement('option');
+                    opt.value = cat;
+                    datalist.appendChild(opt);
+                });
+            } catch(e) {
+                console.log("Erro ao carregar categorias dinâmicas");
+            }
+        }
+
+        async function carregarProdutos(cat = 'todos') {
+            const container = document.getElementById('produtosLista');
+            container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Carregando...</p>';
+
+            try {
+                const url = cat === 'todos' ? `${API_URL}/produtos` : `${API_URL}/produtos?categoria=${cat}`;
+                const response = await fetch(url);
+                const produtos = await response.json();
+
+                if (!Array.isArray(produtos) || produtos.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Nenhum produto cadastrado.</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                produtos.forEach(prod => {
+                    const card = document.createElement('div');
+                    let estiloBorda = '1px solid var(--border-color)';
+                    if(window.estiloCartaoAtual === 'bordered') estiloBorda = '2px solid var(--primary-color)';
+                    if(window.estiloCartaoAtual === 'minimal') estiloBorda = 'none';
+
+                    card.className = 'product-card';
+                    card.style.border = estiloBorda;
+
+                    const imgTag = prod.imagem_url 
+                        ? `<img src="${API_URL}/uploads/${prod.imagem_url}" alt="${prod.nome}" onerror="this.src='https://via.placeholder.com/200x120?text=Sem+Foto'">` 
+                        : `<img src="https://via.placeholder.com/200x120?text=Sem+Foto" alt="Sem Foto">`;
+
+                    card.innerHTML = `
+                        ${imgTag}
+                        <div class="product-info">
+                            <span class="badge">${prod.categoria || 'Geral'}</span>
+                            <h4 style="margin-top: 4px;">${prod.nome}</h4>
+                            <p class="price">R$ ${parseFloat(prod.preco).toFixed(2)}</p>
+                            ${prod.link_externo ? `<p><a href="${prod.link_externo}" target="_blank" style="color: var(--primary-color);">🔗 Link Externo</a></p>` : ''}
+                            ${prod.stl_url ? `<p><a href="${API_URL}/uploads/${prod.stl_url}" target="_blank" download style="color: #4da6ff;">📥 Baixar .STL</a></p>` : ''}
+                            ${prod.arquivo_extra ? `<p><a href="${API_URL}/uploads/${prod.arquivo_extra}" target="_blank" download style="color: #66bb6a;">📎 Arquivo Extra</a></p>` : ''}
+                            <button onclick="excluirProduto(${prod.id})" style="background: #d9534f; color: white; border: none; padding: 6px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 8px; font-size: 11px;">🗑️ Excluir Produto</button>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                container.innerHTML = '<p style="color: #d9534f; font-size: 12px;">Erro ao carregar produtos.</p>';
+            }
+        }
+
+        document.getElementById('btnAtualizarLista').addEventListener('click', () => {
+            carregarCategoriasESincronizar();
+            carregarProdutos(categoriaAtual);
+        });
+
+        const form = document.getElementById('produtoForm');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('nome', document.getElementById('nome').value);
+            formData.append('preco', document.getElementById('preco').value);
+            formData.append('link_externo', document.getElementById('link_externo').value);
+            formData.append('categoria', document.getElementById('categoriaInput').value || 'Geral');
+            
+            const imagemInput = document.getElementById('imagem').files[0];
+            if (imagemInput) formData.append('imagem', imagemInput);
+
+            const stlInput = document.getElementById('stl').files[0];
+            if (stlInput) formData.append('stl', stlInput);
+
+            const extraInput = document.getElementById('extra').files[0];
+            if (extraInput) formData.append('extra', extraInput);
+
+            document.getElementById('resultado').innerText = "Salvando produto e sincronizando categorias...";
+
+            try {
+                const response = await fetch(`${API_URL}/produtos/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                document.getElementById('resultado').innerText = JSON.stringify(result, null, 2);
+                
+                form.reset();
+                carregarCategoriasESincronizar();
+                carregarProdutos(categoriaAtual);
+            } catch (err) {
+                document.getElementById('resultado').innerText = "Erro de conexão: " + err.message;
+            }
+        });
+    </script>
+</body>
+</html>
