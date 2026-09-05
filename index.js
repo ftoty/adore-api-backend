@@ -11,6 +11,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static('uploads'));
+app.use(express.static('index.html'));
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -74,6 +75,10 @@ app.delete('/produtos/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ erro: err.message });
   }
+});
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html', 'index.html'));
 });
 
 app.post('/produtos/upload', upload.fields([
