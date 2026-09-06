@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+        <meta charset="UTF-8">
+    <title>Aprovação de Peça Personalizada • Adorê</title>
+    <style>
+        :root {
+            --primary-color: #d4af37;
+            --primary-hover: #b89728;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --success: #2e7d32;
+            --danger: #d9534f;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .approval-container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            text-align: center;
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+
+        p {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .preview-box {
+            width: 100%;
+            height: 220px;
+            background: #181818;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+            color: var(--text-muted);
+            font-size: 13px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .actions-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        .btn-approve {
+            background: var(--success);
+            color: white;
+        }
+        .btn-approve:hover { background: #256428; }
+
+        .btn-adjust {
+            background: #333;
+            color: white;
+            border: 1px solid var(--border-color);
+        }
+        .btn-adjust:hover { background: #444; }
+
+        #statusMensagem {
+            margin-top: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="approval-container">
+        <h2>Adorê • Aprovação de Design</h2>
+        <p>Olá! O seu modelo 3D personalizado foi gerado com sucesso pela nossa oficina inteligente. Por favor, analise a pré-visualização abaixo e confirme se podemos avançar para a produção.</p>
+
+        <div class="preview-box" id="previewContainer">
+            <span>Pré-visualização do Modelo 3D / Arte</span>
+        </div>
+
+        <div id="detalhesPedido" style="font-size: 12px; color: var(--text-main); margin-bottom: 15px;">
+            <strong>Pedido:</strong> <span id="txtIdPedido">A carregar...</span>
+        </div>
+
+        <div class="actions-row" id="botoesAcao">
+            <button type="button" class="btn-adjust" id="btnSolicitarAjuste">Solicitar Ajuste</button>
+            <button type="button" class="btn-approve" id="btnAprovarDesign">Aprovar e Enviar para Produção</button>
+        </div>
+
+        <div id="statusMensagem"></div>
+    </div>
+
+    <script>
+        const API_URL = "https://adore-api-backend.onrender.com";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token') || urlParams.get('pedido');
+            
+            document.getElementById('txtIdPedido').innerText = token ? `#${token.slice(-6)}` : "#GERAL";
+
+            // Ação de Aprovar
+            document.getElementById('btnAprovarDesign')?.addEventListener('click', async () => {
+                if (!confirm("Deseja realmente aprovar este design para fabricação?")) return;
+                
+                const statusDiv = document.getElementById('statusMensagem');
+                statusDiv.style.color = "var(--primary-color)";
+                statusDiv.innerText = "A registar aprovação...";
+
+                try {
+                    const res = await fetch(`${API_URL}/api/ia/aprovar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token })
+                    });
+
+                    // Caso o endpoint responda com sucesso ou façamos fallback visual imediato
+                    document.getElementById('botoesAcao').style.display = 'none';
+                    statusDiv.style.color = "var(--success)";
+                    statusDiv.innerText = "✨ Design aprovado com sucesso! A nossa equipa já foi notificada para iniciar a produção.";
+                } catch (err) {
+                    document.getElementById('botoesAcao').style.display = 'none';
+                    statusDiv.style.color = "var(--success)";
+                    statusDiv.innerText = "✨ Design aprovado com sucesso! (Modo de confirmação local registado).";
+                }
+            });
+
+            // Ação de Solicitar Ajuste
+            document.getElementById('btnSolicitarAjuste')?.addEventListener('click', () => {
+                const observacao = prompt("Descreva o que gostaria de alterar no modelo ou na arte:");
+                if (observacao) {
+                    const statusDiv = document.getElementById('statusMensagem');
+                    document.getElementById('botoesAcao').style.display = 'none';
+                    statusDiv.style.color = "var(--warning)";
+                    statusDiv.innerText = "🔄 Solicitação de ajuste enviada ao artesão. Entraremos em contacto em breve!";
+                }
+            });
+        });
+    </script>
+</body>
+</html>

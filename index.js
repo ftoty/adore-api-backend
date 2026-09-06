@@ -1,17 +1,30 @@
+// ==========================================
+// 1. IMPORTAÇÕES E CONFIGURAÇÃO GLOBAL
+// ==========================================
 const express = require('express');
 const { Pool } = require('pg');
+const { createClient } = require('@supabase/supabase-js');
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
 
+const cors = require('cors');
+app.use(cors({
+    origin: ['https://app.netlify.com', 'https://www.adorepersonalite.com', /\.wixsite\.com$/],
+    credentials: true
+}));
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Disponibilizar a pasta de uploads publicamente
 app.use('/uploads', express.static('uploads'));
 
+// ==========================================
+// 2. CONFIGURAÇÃO DO MULTER (UPLOADS)
+// ==========================================
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');
@@ -24,10 +37,83 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// ==========================================
+// 3. CONFIGURAÇÃO DA BASE DE DADOS (POSTGRES & SUPABASE)
+// ==========================================
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || "postgresql://postgres.mlfgluwcuzddwijffrbe:Wiegaist1403@@aws-0-us-east-1.pooler.supabase.com:5432/postgres",
   ssl: { rejectUnauthorized: false }
 });
+
+// Inicialização do cliente Supabase para o inventário
+const supabase = createClient(
+  process.env.SUPABASE_URL || "https://wryyuhvuyqjxtvuxknyf.supabase.co", 
+  process.env.SUPABASE_ANON_KEY || "SUA_CHAVE_ANON_AQUI"
+);
+
+// ==========================================
+// 4. ROTAS DE INVENTÁRIO & MATERIAIS (SUPABASE)
+// ==========================================
+
+app.get('/api/materiais', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('materiais_inventario')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        console.error("Erro ao buscar materiais:", err.message);
+        res.status(500).json({ sucesso: false, mensagem: err.message });
+    }
+});
+
+app.post('/api/materiais', async (req, res) => {
+    try {
+        const { nome, tipo, quantidade_atual, unidade_medida, custo_unitario, fornecedor } = req.body;
+
+        const { data, error } = await supabase
+            .from('materiais_inventario')
+            .insert([{ 
+                nome, 
+                tipo, 
+                quantidade_atual: parseFloat(quantidade_atual), 
+                unidade_medida, 
+                custo_unitario: parseFloat(custo_unitario), 
+                fornecedor 
+            }])
+            .select();
+
+        if (error) throw error;
+        res.json({ sucesso: true, mensagem: "Material cadastrado com sucesso!", material: data[0] });
+    } catch (err) {
+        console.error("Erro ao cadastrar material:", err.message);
+        res.status(500).json({ sucesso: false, mensagem: err.message });
+    }
+});
+
+app.delete('/api/materiais/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const { error } = await supabase
+            .from('materiais_inventario')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.json({ sucesso: true, mensagem: "Material excluído com sucesso!" });
+    } catch (err) {
+        console.error("Erro ao excluir material:", err.message);
+        res.status(500).json({ sucesso: false, mensagem: err.message });
+    }
+});
+
+// ==========================================
+// 5. ROTAS DE CATEGORIAS, PRODUTOS E UPLOAD
+// ==========================================
 
 app.get('/categorias', async (req, res) => {
   try {
@@ -139,7 +225,10 @@ app.post('/produtos/upload', upload.fields([
   }
 });
 
+// ==========================================
+// 6. INICIALIZAÇÃO DO SERVIDOR (Sempre no fim!)
+// ==========================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+    console.log(`Servidor a correr na porta ${PORT}`);
 });
