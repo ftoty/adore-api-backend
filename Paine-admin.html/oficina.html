@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clã Krom Adorê - Oficina 3D Criativa</title>
+    
+    <!-- Link para o CSS Modularizado -->
+    <link rel="stylesheet" href="assets/css/oficina.css">
+</head>
+<body>
+
+    <!-- ========================================== -->
+    <!-- CABEÇALHO / NAVEGAÇÃO SUPERIOR             -->
+    <!-- ========================================== -->
+    <header class="top-banner">
+        <div class="logo-area">
+            <span class="logo-text" onclick="abrirModalAuth('login')">KROM</span>
+            <span class="beta-badge">Krom Agent Beta</span>
+        </div>
+
+        <nav class="nav-menu">
+            <!-- Recursos Dropdown -->
+            <div class="dropdown-container" onclick="toggleDropdown(this, event)">
+                <button class="nav-btn">Recursos 
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" onclick="filtrarSecao('aprender')">Desbravar (Aprender)</a>
+                    <a class="dropdown-item" onclick="filtrarSecao('programas')">Programas</a>
+                    <a class="dropdown-item" onclick="filtrarSecao('plugins')">Plugins</a>
+                    <a class="dropdown-item" onclick="filtrarSecao('ferramentas')">Ferramentas</a>
+                </div>
+            </div>
+
+            <!-- Lab Criativo Dropdown -->
+            <div class="dropdown-container" onclick="toggleDropdown(this, event)">
+                <button class="nav-btn">Lab Criativo (Oficina & Forja) 
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" onclick="filtrarLab('figurinhas')">Figurinhas</a>
+                    <a class="dropdown-item" onclick="filtrarLab('chaveiros')">Chaveiros</a>
+                    <a class="dropdown-item" onclick="filtrarLab('utilidades')">Utilidades</a>
+                    <a class="dropdown-item" onclick="filtrarLab('sublimacao')">Sublimação</a>
+                </div>
+            </div>
+
+            <button class="nav-btn" onclick="abrirMinhaOficina()">Minha Oficina</button>
+        </nav>
+
+        <div class="top-right-controls">
+            <button class="reward-btn" onclick="abrirModalRecompensa()">🎁 Indicação & Recompensa</button>
+            <button class="upgrade-btn" onclick="abrirModalUpgrade()">Fazer Upgrade</button>
+            <button class="icon-btn" title="Ajuda">❓</button>
+            <button class="icon-btn" title="Notificações" onclick="abrirNotificacoes()">🔔</button>
+            <button class="icon-btn" title="Configurações da Conta" onclick="abrirConfiguracoes()">⚙️</button>
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- ESTRUTURA CENTRAL DO ESPAÇO DE TRABALHO    -->
+    <!-- ========================================== -->
+    <div class="workspace-layout">
+        
+        <!-- Sidebar Esquerda com Submenus -->
+        <aside class="left-sidebar">
+            <div class="sidebar-actions">
+                <button class="action-input-btn" onclick="abrirBusca()">🔍 Procurar</button>
+                <button class="action-input-btn" onclick="abrirCarregar()">📁 Carregar</button>
+            </div>
+
+            <div>
+                <p class="sidebar-section-title">Navegação de Ativos</p>
+                <div class="menu-list">
+                    <button class="menu-item active" onclick="filtrarAtivos('todos')">📂 Todos</button>
+                    
+                    <div>
+                        <button class="menu-item" onclick="toggleSubmenu('sub-modelo', event)">🧊 Modelo ▾</button>
+                        <div id="sub-modelo" class="submenu-list">
+                            <button class="submenu-item" onclick="filtrarAtivos('modelo-baixo-poli')">Baixo Polígono</button>
+                            <button class="submenu-item" onclick="filtrarAtivos('modelo-rigged')">Rigged & Animado</button>
+                            <button class="submenu-item" onclick="filtrarAtivos('modelo-pecas')">Peças Customizadas</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button class="menu-item" onclick="toggleSubmenu('sub-textura', event)">🎨 Texturizado ▾</button>
+                        <div id="sub-textura" class="submenu-list">
+                            <button class="submenu-item" onclick="filtrarAtivos('textura-pbr')">PBR Materials</button>
+                            <button class="submenu-item" onclick="filtrarAtivos('textura-uv')">Mapas UV</button>
+                            <button class="submenu-item" onclick="filtrarAtivos('textura-pintura')">Pintura Digital</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button class="menu-item" onclick="toggleSubmenu('sub-animacao', event)">🎬 Animação ▾</button>
+                        <div id="sub-animacao" class="submenu-list">
+                            <button class="submenu-item" onclick="filtrarAtivos('anim-idle')">Ciclo Idle</button>
+                            <button class="submenu-item" onclick="filtrarAtivos('anim-combate')">Ações & Combate</button>
+                            <button class="submenu-item" onclick="filtrarAtivos('anim-transicao')">Transições</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <p class="sidebar-section-title">Filtros Rápidos</p>
+                <div class="filter-box">
+                    <span class="filter-chip active" onclick="aplicarFiltroRapido('Tudo', this)">Tudo</span>
+                    <span class="filter-chip" onclick="aplicarFiltroRapido('Status', this)">Status</span>
+                    <span class="filter-chip" onclick="aplicarFiltroRapido('Baixado', this)">Baixado</span>
+                    <span class="filter-chip" onclick="aplicarFiltroRapido('Criado', this)">Criado</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Canvas Central -->
+        <main class="center-canvas">
+            <div class="canvas-header">
+                <h3 style="color: var(--accent-green); font-size: 16px; font-weight: 700;">Biblioteca de Projetos Krom</h3>
+            </div>
+            
+            <div class="converter-workspace">
+                <div class="converter-box" onclick="abrirCarregar()">
+                    <span style="font-size: 28px; margin-bottom: 6px;">📥</span>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--text-main);">Carregar Imagem / Referência</span>
+                    <span style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">PNG, JPG, SVG</span>
+                </div>
+                <div class="converter-arrow" onclick="executarConversao3D()" title="Converter para 3D">⇄</div>
+                <div class="converter-box" style="border-style: solid; border-color: var(--accent-green);">
+                    <span style="font-size: 28px; margin-bottom: 6px;">🧊</span>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--accent-green);">Resultado 3D Gerado</span>
+                    <span style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">Malha Pronta p/ Oficina</span>
+                </div>
+            </div>
+
+            <div class="multi-select-bar">
+                <span><input type="checkbox" id="selectAll" style="margin-right: 8px;"> Seleção Múltipla Ativa</span>
+                <span style="color: var(--accent-green); cursor: pointer;" onclick="gerenciarSelecionados()">Gerenciar Selecionados</span>
+            </div>
+
+            <div class="asset-grid">
+                <div class="asset-card"><input type="checkbox"><img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&q=80" class="asset-img-preview"><span>Modelo 3D #1 - Esfera PBR</span></div>
+                <div class="asset-card"><input type="checkbox"><img src="https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=300&q=80" class="asset-img-preview"><span>Textura UV Armadura</span></div>
+                <div class="asset-card"><input type="checkbox"><img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?w=300&q=80" class="asset-img-preview"><span>Animação Idle Runa</span></div>
+                <div class="asset-card"><input type="checkbox"><img src="https://images.unsplash.com/photo-1633167606207-d840b5070fc2?w=300&q=80" class="asset-img-preview"><span>Chaveiro Clã Krom</span></div>
+                <div class="asset-card"><input type="checkbox"><img src="https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=300&q=80" class="asset-img-preview"><span>Avatar Mestre Krom</span></div>
+                <div class="asset-card"><input type="checkbox"><img src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=300&q=80" class="asset-img-preview"><span>Artefato Forja 3D</span></div>
+            </div>
+        </main>
+
+        <!-- Sidebar Direita -->
+        <aside class="right-sidebar">
+            <div>
+                <p class="sidebar-section-title">Meus Trabalhos</p>
+                <div class="menu-list">
+                    <button class="menu-item" onclick="abrirTrabalhos('imagens')">📂 Imagens</button>
+                    <button class="menu-item" onclick="abrirTrabalhos('modelo')">🧊 Modelo</button>
+                    <button class="menu-item" onclick="abrirTrabalhos('oficina')">🛠️ Oficina Criativa Krom</button>
+                </div>
+            </div>
+
+            <div>
+                <p class="sidebar-section-title">Krom Agent (Beta)</p>
+                <div class="agent-card">
+                    <div class="agent-header">
+                        <span>Assistente IA</span>
+                        <span class="agent-status">Beta</span>
+                    </div>
+                    <button class="agent-action-btn" onclick="executarAcaoKrom('imagem')">✨ Imagem</button>
+                    <button class="agent-action-btn" onclick="executarAcaoKrom('modelos')">🧊 Modelos</button>
+                    <button class="agent-action-btn" onclick="executarAcaoKrom('aprovar')">✅ Aprovar</button>
+                    <button class="agent-action-btn" onclick="executarAcaoKrom('animar')">🎬 Animar</button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- WIDGET FLUTUANTE DO KROM -->
+    <div id="kromFloatingWidget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end;">
+        <div id="kromChatWindow" class="hidden" style="width: 360px; height: 480px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+            <div class="krom-chat-header" style="background: var(--bg-surface); padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+                <div class="krom-chat-header-info" style="display: flex; align-items: center; gap: 10px;">
+                    <video src="assets/krom-animacao.mp4" autoplay loop muted playsinline style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid var(--accent-green);"></video>
+                    <div>
+                        <h4 style="margin: 0; font-size: 13px; color: var(--text-main);">Krom • Mestre Artesão</h4>
+                        <span style="font-size: 10px; color: var(--accent-green); font-weight: bold;">● Online na Oficina</span>
+                    </div>
+                </div>
+                <button id="fecharChatKrom" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px;">✕</button>
+            </div>
+            <div class="krom-chat-messages" id="kromChatMessages" style="flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+                <div class="krom-msg krom" style="background: var(--bg-surface); color: var(--text-main); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--accent-green);">Ho ho! Mestre Krom na escuta. O que vamos forjar hoje?</div>
+            </div>
+            <div class="krom-chat-input-area" style="padding: 10px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; gap: 6px;">
+                <input type="text" id="kromInputText" placeholder="Pede dicas ao Krom..." autocomplete="off" style="flex: 1; background: var(--bg-base); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 12px; outline: none;">
+                <button id="kromSendBtn" style="background: var(--accent-green); color: #000; border: none; padding: 0 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Enviar</button>
+            </div>
+        </div>
+        <div class="krom-avatar-bubble" id="kromAvatarToggle" title="Clica para falar com o Krom!" style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 3px solid var(--accent-green); box-shadow: 0 5px 25px rgba(0,0,0,0.9); cursor: pointer; background: #111; transition: transform 0.2s;">
+            <video src="assets/krom-animacao.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+        </div>
+    </div>
+
+    <div id="kromModalContainer"></div>
+
+    <div id="contextMenu" class="context-menu">
+        <button id="inspectBtn">Inspecionar Elemento</button>
+    </div>
+
+    <div id="inspectorPanel" class="inspector-panel">
+        <div class="inspector-tabs">
+            <button class="inspector-tab active" onclick="switchTab(event, 'tab-styles')">Estilos</button>
+            <button class="inspector-tab" onclick="switchTab(event, 'tab-computed')">Calculado</button>
+            <button class="inspector-tab" onclick="switchTab(event, 'tab-layout')">Layout</button>
+            <button class="inspector-tab" onclick="switchTab(event, 'tab-listeners')">Ouvintes e Eventos</button>
+            <button class="inspector-tab" onclick="switchTab(event, 'tab-breakpoints')">Pontos de Interrupção DOM</button>
+            <button style="margin-left: auto; background: none; border: none; color: #fff; cursor: pointer; padding: 4px 8px;" onclick="closeInspector()">✕</button>
+        </div>
+        
+        <div id="tab-styles" class="inspector-content tab-pane active">
+            <p>element.style { background: var(--bg-surface); }</p>
+        </div>
+        <div id="tab-computed" class="inspector-content tab-pane"><p>display: flex;</p></div>
+        <div id="tab-layout" class="inspector-content tab-pane"><p>Box Model</p></div>
+        <div id="tab-listeners" class="inspector-content tab-pane"><p>Listeners ativos</p></div>
+        <div id="tab-breakpoints" class="inspector-content tab-pane"><p>[ ] Subtree</p></div>
+    </div>
+
+    <!-- SCRIPTS MODULARIZADOS -->
+    <script src="js/paymentcontroller.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/ia.js"></script>
+    <script src="js/perfil-persistencia.js"></script>
+    <script src="js/oficina-logic.js"></script>
+</body>
+</html>

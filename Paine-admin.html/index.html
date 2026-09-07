@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adorê - Painel Administrativo Completo</title>
+    
+    <!-- Bibliotecas e SDKs Externos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --primary-color: #d4af37;
+            --primary-hover: #b89728;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #181818;
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --danger: #d9534f;
+            --warning: #f0ad4e;
+            --success: #2e7d32;
+        }
+
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; 
+            background: var(--bg-color); 
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar & Layout */
+        sidebar, .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 15px;
+            position: relative;
+            transition: transform 0.3s ease;
+            z-index: 10;
+            overflow-y: auto !important;
+            max-height: 100vh;
+        }
+
+        sidebar::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 6px; }
+        sidebar::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: #141414; }
+        sidebar::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
+
+        sidebar.collapsed, .sidebar.collapsed {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+        }
+
+        .hamburger-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #222;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 20;
+            font-size: 16px;
+        }
+        .hamburger-btn:hover { background: #333; border-color: var(--primary-color); }
+
+        .sidebar-brand { text-align: center; margin-bottom: 20px; }
+        .sidebar-brand video { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .sidebar-brand h2 { font-size: 14px; color: var(--primary-color); margin: 6px 0 0 0; text-transform: uppercase; }
+
+        .nav-section { margin-bottom: 15px; }
+        .nav-section h4 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        .nav-link-btn, .filter-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-main);
+            border: 1px solid transparent; text-align: left; padding: 9px 12px;
+            border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 4px; transition: 0.2s;
+        }
+        .nav-link-btn:hover, .nav-link-btn.active, .filter-btn:hover, .filter-btn.active {
+            background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color);
+        }
+
+        .admin-toggle-header {
+            font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+            cursor: pointer; padding: 6px 0; border-top: 1px solid var(--border-color);
+            margin-top: 10px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .admin-controls { background: #1e1e1e; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); margin: 5px 0 10px 0; display: none; }
+        .admin-controls.show { display: block; }
+        .admin-controls label { font-size: 10px; display: block; margin-top: 5px; color: var(--text-muted); }
+        .admin-controls input, .admin-controls select { width: 100%; padding: 5px; font-size: 11px; margin-top: 2px; background: #111; border: 1px solid #444; color: white; border-radius: 4px; }
+
+        main { flex: 1; padding: 25px; padding-left: 65px; overflow-y: auto; }
+        main.full { padding-left: 25px; }
+
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid var(--border-color); }
+        .hidden { display: none !important; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+
+        input, button, select, textarea { padding: 9px 12px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: #2a2a2a; color: white; outline: none; }
+        textarea { resize: vertical; min-height: 80px; }
+        input:focus, select:focus { border-color: var(--primary-color); }
+
+        button.action-btn { background: var(--primary-color); color: #121212; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 12px; }
+        button.action-btn:hover { background: var(--primary-hover); }
+
+        .google-btn { background: #ffffff; color: #121212; border: none; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; width: 100%; }
+        .google-btn:hover { background: #e0e0e0; }
+
+        .calc-box { background: #252525; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
+        .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+        .calc-row div { display: flex; flex-direction: column; gap: 4px; }
+        .result-text { margin-top: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 8px; }
+        #precoSugerido { color: var(--primary-color); font-size: 16px; font-weight: bold; }
+        #resultado { margin-top: 10px; background: #2a2a2a; padding: 10px; border-radius: 6px; font-size: 11px; font-family: monospace; color: #ddd; }
+
+        .logout-btn { background: var(--danger); color: white; padding: 8px; font-size: 11px; margin-top: 15px; width: 100%; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .product-card { background: #252525; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .product-card img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; background: #111; cursor: pointer; }
+        .product-info h4 { margin: 0; font-size: 14px; color: var(--text-main); }
+        .product-info p { margin: 2px 0; font-size: 11px; color: var(--text-muted); }
+        .product-info .price { color: var(--primary-color); font-weight: bold; font-size: 13px; }
+
+        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        table.data-table th, table.data-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        table.data-table th { color: var(--primary-color); text-transform: uppercase; font-size: 10px; background: #1a1a1a; }
+        .status-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .status-pending { background: #332b00; color: var(--warning); }
+        .status-approved { background: #0c2b14; color: var(--success); }
+
+        #kromFloatingWidget { position: fixed; bottom: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; }
+        .krom-avatar-bubble { width: 220px; height: 220px; border-radius: 50%; overflow: hidden; border: 4px solid var(--primary-color); box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: pointer; background: #111; }
+        .krom-avatar-bubble video { width: 100%; height: 100%; object-fit: cover; }
+        #kromChatWindow { width: 360px; height: 480px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 15px; }
+        .krom-chat-header { background: #181818; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
+        .krom-chat-header-info { display: flex; align-items: center; gap: 10px; }
+        .krom-chat-header-info video { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .krom-chat-messages { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+        .krom-msg { max-width: 85%; padding: 8px 12px; border-radius: 8px; line-height: 1.4; white-space: pre-wrap; }
+        .krom-msg.krom { background: #252525; color: var(--text-main); align-self: flex-start; border-left: 3px solid var(--primary-color); }
+        .krom-msg.user { background: var(--primary-color); color: #121212; align-self: flex-end; font-weight: 500; }
+        .krom-chat-input-area { padding: 10px; background: #181818; border-top: 1px solid var(--border-color); display: flex; gap: 6px; }
+        .krom-chat-input-area input { flex: 1; background: #111; color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 12px; }
+        .krom-chat-input-area button { background: var(--primary-color); color: #121212; border: none; padding: 0 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <button class="hamburger-btn" id="hamburgerToggle">☰</button>
+
+    <!-- TELA DE LOGIN NORMAL -->
+    <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
+        <div class="card" style="text-align: center;">
+            <div style="width: 180px; height: 120px; margin: 0 auto 15px auto; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <video id="logoVideo" style="width:100%; height:100%; object-fit:cover;" src="animação logo.mp4" muted playsinline></video>
+            </div>
+            <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
+            
+            <form id="loginForm">
+                <label>E-mail</label>
+                <input type="email" id="loginEmail" name="email_admin" autocomplete="off" required value="admin@adore.com">
+                
+                <label>Senha</label>
+                <input type="password" id="loginSenha" name="senha_admin" autocomplete="new-password" required value="123456">
+                
+                <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
+            </form>
+
+            <button type="button" id="abrirModalRegistoBtn" style="background: transparent; border: none; color: var(--primary-color); font-size: 11px; margin-top: 15px; cursor: pointer; text-decoration: underline;">
+                Primeiro acesso? Criar conta de administrador
+            </button>
+
+            <div style="margin: 15px 0; color: var(--text-muted); font-size: 11px; text-transform: uppercase;">OU</div>
+
+            <button type="button" id="googleLoginBtn" class="google-btn">
+                <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                Entrar / Registar com Google
+            </button>
+
+            <div id="loginErro" style="color: var(--danger); font-size: 11px; margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <!-- MENU LATERAL -->
+    <sidebar id="sidebarNav" class="hidden">
+        <div class="sidebar-brand" style="margin-top: 10px;">
+            <video src="animação logo.mp4" muted autoplay loop style="width: 80px; height: 50px; border-radius: 4px;"></video>
+            <h2 id="userWelcomeTitle">Adorê Adm</h2>
+        </div>
+
+        <div class="admin-toggle-header" id="adminToggleHeader">
+            <span>⚙️ Customizar Layout</span>
+            <span>▼</span>
+        </div>
+        <div class="admin-controls" id="adminControlsPanel">
+            <label>Cor Principal</label>
+            <input type="color" id="pickerPrimary" value="#d4af37">
+            <label>Estilo do Cartão</label>
+            <select id="selectLayoutCard">
+                <option value="solid">Sólido Escuro</option>
+                <option value="bordered">Com Borda Realçada</option>
+                <option value="minimal">Minimalista</option>
+            </select>
+        </div>
+
+        <div class="nav-section">
+            <h4>Navegação Principal</h4>
+            <button class="nav-link-btn active" data-target="viewVitrine">📂 Vitrine & Produtos</button>
+            <button class="nav-link-btn" data-target="viewIA">🤖 Criador IA (Meshy/Tripo)</button>
+            <button class="nav-link-btn" data-target="viewPedidos">📦 Gestão de Pedidos</button>
+            <button class="nav-link-btn" data-target="viewInventario">🛠️ Inventário & Materiais</button>
+        </div>
+
+        <!-- GERIR CATEGORIAS DE VITRINE -->
+        <div class="nav-section">
+            <h4>Gerir Categorias (Vitrine)</h4>
+            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                <input type="text" id="novaCatVitrine" placeholder="Nova Categoria..." style="flex:1; padding:5px; font-size:11px;">
+                <button type="button" id="btnAddCatVitrine" class="action-btn" style="padding: 5px 8px; font-size:10px;">+</button>
+            </div>
+            <select id="selectDelCatVitrine" style="width: 100%; padding: 5px; font-size: 11px; background: #111; color: white; border: 1px solid #444; border-radius: 4px; margin-bottom: 4px;">
+                <option value="">Selecionar para excluir...</option>
+            </select>
+            <button type="button" id="btnDelCatVitrine" style="width: 100%; background: var(--danger); color: white; border: none; padding: 4px; font-size: 10px; border-radius: 4px; cursor: pointer;">Excluir Categoria</button>
+        </div>
+
+        <div class="nav-section" id="subcategoriasSecao">
+            <h4>Filtrar Vitrine</h4>
+            <div id="categoriasFiltrosContainer">
+                <button class="filter-btn active" data-cat="todos">📂 Todas as Peças</button>
+            </div>
+        </div>
+
+        <!-- GERIR CATEGORIAS DE INVENTÁRIO -->
+        <div class="nav-section">
+            <h4>Gerir Setores (Inventário)</h4>
+            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                <input type="text" id="novaCatInv" placeholder="Novo Setor..." style="flex:1; padding:5px; font-size:11px;">
+                <button type="button" id="btnAddCatInv" class="action-btn" style="padding: 5px 8px; font-size:10px;">+</button>
+            </div>
+            <select id="selectDelCatInv" style="width: 100%; padding: 5px; font-size: 11px; background: #111; color: white; border: 1px solid #444; border-radius: 4px; margin-bottom: 4px;">
+                <option value="">Selecionar setor...</option>
+            </select>
+            <button type="button" id="btnDelCatInv" style="width: 100%; background: var(--danger); color: white; border: none; padding: 4px; font-size: 10px; border-radius: 4px; cursor: pointer;">Excluir Setor</button>
+        </div>
+
+        <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
+    </sidebar>
+
+    <!-- KROM FLUTUANTE -->
+    <div id="kromFloatingWidget" class="hidden">
+        <div id="kromChatWindow" class="hidden">
+            <div class="krom-chat-header">
+                <div class="krom-chat-header-info">
+                    <video src="krom animação.mp4" autoplay loop muted playsinline></video>
+                    <div>
+                        <h4>Krom • Mestre Artesão</h4>
+                        <span style="font-size: 10px; color: var(--success); font-weight: bold;">● Online na Oficina</span>
+                    </div>
+                </div>
+                <div class="krom-chat-controls">
+                    <button id="btnSilenciarKrom" title="Som">🔇</button>
+                    <button id="btnEnviarOficina" title="Minimizar">🛠️</button>
+                </div>
+            </div>
+            <div class="krom-chat-messages" id="kromChatMessages">
+                <div class="krom-msg krom">Ho ho! Sessão iniciada com sucesso. O que forjamos hoje?</div>
+            </div>
+            <div class="krom-chat-input-area">
+                <input type="text" id="kromInputText" placeholder="Pede dicas ao Krom..." autocomplete="off">
+                <button id="kromSendBtn">Enviar</button>
+            </div>
+        </div>
+        <div class="krom-avatar-bubble" id="kromAvatarToggle" title="Clica para falar com o Krom!">
+            <video src="krom animação.mp4" autoplay loop muted playsinline></video>
+        </div>
+    </div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main id="mainContent" class="hidden full">
+
+        <!-- PÁGINA 1: VITRINE -->
+        <div id="viewVitrine" class="admin-view">
+            <div class="card calc-box">
+                <h3>Calculadora Automática (Base: Peso & 50% Lucro)</h3>
+                <div class="calc-row">
+                    <div><label>Peso da Peça (g)</label><input type="number" id="calcPeso" value="50"></div>
+                    <div><label>Preço do Kg (R$)</label><input type="number" step="0.01" id="calcPrecoKg" value="90.00"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Tempo (Horas)</label><input type="number" step="0.1" id="calcHoras" value="4.5"></div>
+                    <div><label>Custo Máquina/h (R$)</label><input type="number" step="0.01" id="calcCustoHora" value="2.50"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Margem de Lucro (%)</label><input type="number" id="calcLucro" value="50"></div>
+                    <div style="justify-content: flex-end;"><label>&nbsp;</label><button type="button" class="action-btn" id="btnCalcular">Calcular Preço</button></div>
+                </div>
+                <div class="result-text">
+                    <span>Preço Base Sugerido: <strong id="precoSugerido">R$ 0,00</strong></span>
+                    <button type="button" class="action-btn" id="btnUsarPreco" style="padding: 6px 10px; background: #2e7d32; color: white;">Aplicar no Preço</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--primary-color); font-size: 15px; margin-bottom: 10px;">Cadastrar Novo Produto</h3>
+                <form id="produtoForm">
+                    <div class="calc-row">
+                        <div><label>Nome do Produto</label><input type="text" id="produtoNome" name="nome" placeholder="Nome do modelo 3D"></div>
+                        <div>
+                            <label>Categoria</label>
+                            <select id="categoriaInput" name="categoria" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
+                                <option value="Decoração">Decoração</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Preço de Venda (R$)</label><input type="number" step="0.01" id="preco" name="preco" required></div>
+                        <div><label>Link Externo (URL)</label><input type="text" id="link_externo" name="link_externo" placeholder="https://..."></div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Imagem de Capa</label><input type="file" id="imagem" name="imagem" accept="image/*"></div>
+                        <div><label>Arquivo do Produto / 3D</label><input type="file" id="inputArquivoStl" name="stl" accept="*"></div>
+                    </div>
+                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Salvar no Supabase</button>
+                </form>
+                <div id="resultado">Aguardando envio...</div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="color: var(--primary-color); margin: 0; font-size: 15px;" id="tituloVitrine">Vitrine • Todas as Peças</h3>
+                    <button type="button" class="action-btn" id="btnAtualizarLista" style="padding: 5px 8px; font-size: 10px;">Atualizar</button>
+                </div>
+                <div id="produtosLista" class="products-grid">
+                    <p style="color: var(--text-muted); font-size: 12px;">Carregando...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PÁGINA 2: CRIADOR IA -->
+        <div id="viewIA" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🤖 Criador de Arte & Modelo 3D por IA</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Gere conceitos artísticos e envie diretamente para o link de aprovação do cliente.</p>
+                
+                <form id="iaGeradorForm">
+                    <label>Provedor de IA</label>
+                    <select id="iaProvedor">
+                        <option value="alpha3d">Alpha3D AI (Text-to-3D / Rápido)</option>
+                        <option value="meshy">Meshy AI (Text-to-3D / Alta Fidelidade)</option>
+                        <option value="tripo">Tripo3D AI (Geração Rápida de Malha)</option>
+                    </select>
+
+                    <label>Prompt / Descrição Detalhada da Peça</label>
+                    <textarea id="iaPrompt" placeholder="Ex: Suporte para comando de videogame..."></textarea>
+
+                    <label>E-mail ou WhatsApp do Cliente</label>
+                    <input type="text" id="iaClienteContato" placeholder="cliente@email.com">
+
+                    <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px;">Gerar Arte/Modelo e Enviar para Cliente</button>
+                </form>
+                <div id="iaResultadoStatus" class="hidden" style="margin-top: 15px; background: #252525; padding: 12px; border-radius: 6px; font-size: 12px;">
+                    <p style="color: var(--warning); margin: 0 0 5px 0;"><strong>Status:</strong> Aguardando aprovação do cliente.</p>
+                    <p style="margin: 0;">Link de Aprovação: <a href="#" id="linkAprovacaoVisual" target="_blank" style="color: var(--primary-color);">Copiar Link</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- PÁGINA 3: PEDIDOS -->
+        <div id="viewPedidos" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📦 Menu de Pedidos & Aprovações</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Descrição</th>
+                            <th>Motor IA</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaPedidosCorpo">
+                        <tr>
+                            <td>#1042</td>
+                            <td>cliente@email.com</td>
+                            <td>Suporte de Comando Dragão</td>
+                            <td>Meshy AI</td>
+                            <td><span class="status-badge status-pending">Aguardando Cliente</span></td>
+                            <td><button onclick="simularAprovacaoCliente(1042)" style="background: var(--success); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;">Aprovar</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PÁGINA 4: INVENTÁRIO -->
+        <div id="viewInventario" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🛠️ Gestão de Inventário (3D & Sublimação)</h3>
+                <form id="materialForm">
+                    <div class="calc-row">
+                        <div><label>Nome do Material</label><input type="text" id="matNome" placeholder="Ex: PLA Azul / Caneca" required></div>
+                        <div>
+                            <label>Tipo de Serviço / Setor</label>
+                            <select id="matTipo" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
+                                <option value="3d">Impressão 3D</option>
+                                <option value="sublimacao">Sublimação</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Quantidade</label><input type="number" step="0.01" id="matQtd" required></div>
+                        <div>
+                            <label>Unidade</label>
+                            <select id="matUnidade">
+                                <option value="g">Gramas (g)</option>
+                                <option value="kg">Quilogramas (kg)</option>
+                                <option value="unidades">Unidades (un)</option>
+                                <option value="ml">Mililitros (ml)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Custo Unitário (R$)</label><input type="number" step="0.01" id="matCusto" required></div>
+                        <div><label>Fornecedor</label><input type="text" id="matFornecedor"></div>
+                    </div>
+                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Adicionar Material</button>
+                </form>
+                <div id="matResultado" style="font-size: 11px; margin-top: 10px; color: var(--text-muted);"></div>
+            </div>
+
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📦 Lista de Materiais</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Material</th>
+                            <th>Setor</th>
+                            <th>Quantidade</th>
+                            <th>Custo Unit.</th>
+                            <th>Fornecedor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaMateriaisCorpo">
+                        <tr><td colspan="6" style="color: var(--text-muted); text-align: center;">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL DE PRIMEIRO ACESSO -->
+    <div id="modalPrimeiroAcesso" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 420px; background: var(--card-bg); border: 1px solid var(--primary-color); position: relative; padding: 25px;">
+            <button type="button" id="fecharModalBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
+            
+            <h3 style="color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; font-size: 16px;">Criar Conta de Administrador</h3>
+            
+            <form id="formPrimeiroAcesso">
+                <label>Nome Completo</label>
+                <input type="text" id="regNome" required placeholder="Ex: Maria Silva">
+                
+                <label>E-mail</label>
+                <input type="email" id="regEmail" required placeholder="admin@adore.com">
+                
+                <label>Telefone / WhatsApp</label>
+                <input type="text" id="regTelefone" required placeholder="Ex: (11) 99999-9999">
+
+                <label>Cargo</label>
+                <input type="text" id="regCargo" required placeholder="Ex: Gestora de Produção">
+                
+                <label>Senha</label>
+                <input type="password" id="regSenha" required placeholder="Mínimo 6 caracteres">
+                
+                <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Registar Administrador</button>
+            </form>
+            <div id="regErro" style="color: var(--danger); font-size: 11px; margin-top: 10px; text-align: center;"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS MODULARES -->
+    <script>
+        const API_URL = "https://adore-api-backend.onrender.com";
+    </script>
+    <script src="js/auth.js"></script>
+    <script src="js/vitrine.js"></script>
+    <script src="js/sublimacao.js"></script>
+    <script src="js/krom.js"></script>
+    <script src="js/inventario.js"></script>
+    <script src="js/ia.js"></script>
+    <script src="js/pedidos.js"></script>
+    <script src="js/layout.js"></script>
+    <script src="js/perfil-persistencia.js"></script>
+    <script src="js/stl-reader.js"></script>
+    <script src="js/paymentcontroller.js"></script>
+</body>
+</html>

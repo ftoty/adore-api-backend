@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Adorê • Conversa com o Krom</title>
+    <style>
+        :root {
+            --primary-color: #d4af37;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+        }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 450px;
+            height: 600px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+        .chat-header {
+            background: #181818;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .krom-avatar-wrapper {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--primary-color);
+            background: #111;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .krom-avatar-wrapper video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .chat-header-info h3 {
+            margin: 0;
+            font-size: 15px;
+            color: var(--primary-color);
+        }
+        .chat-header-info span {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+        }
+        .message.krom {
+            background: #252525;
+            color: var(--text-main);
+            align-self: flex-start;
+            border-left: 3px solid var(--primary-color);
+        }
+        .message.user {
+            background: var(--primary-color);
+            color: #121212;
+            align-self: flex-end;
+            font-weight: 500;
+        }
+        .chat-input-area {
+            padding: 12px;
+            background: #181818;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            padding: 10px;
+            background: #111;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: white;
+            font-size: 13px;
+            outline: none;
+        }
+        .chat-input-area input:focus {
+            border-color: var(--primary-color);
+        }
+        .chat-input-area button {
+            background: var(--primary-color);
+            color: #121212;
+            border: none;
+            padding: 0 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .chat-input-area button:hover {
+            background: #b89728;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="krom-avatar-wrapper">
+                <video src="https://adore-api-backend.onrender.com/uploads/animacao-logo.mp4" autoplay loop muted playsinline></video>
+            </div>
+            <div class="chat-header-info">
+                <h3>Krom, Mestre Artesão</h3>
+                <span>Oficina 3D Adorê • GPT-4o Ativo</span>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message krom">
+                Ho ho! Seja muito bem-vindo à oficina da Adorê. Eu sou o Krom, o seu mestre artesão por aqui. Diga-me, que tipo de peça mágica ou utilitária vamos forjar e imprimir em 3D hoje?
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="userInput" placeholder="Converse com o Krom sobre a sua ideia..." autocomplete="off">
+            <button id="sendBtn">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://adore-api-backend.onrender.com";
+        const messagesContainer = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        let historico = [];
+
+        async function enviarMensagem() {
+            const texto = userInput.value.trim();
+            if(!texto) return;
+
+            adicionarMensagem(texto, 'user');
+            userInput.value = '';
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            const loadingId = "loading_" + Date.now();
+            adicionarMensagem("O Krom está a forjar a resposta...", 'krom', loadingId);
+
+            try {
+                const res = await fetch(`${API_URL}/api/ia/chat-krom`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        mensagemDoCliente: texto,
+                        historicoConversa: historico 
+                    })
+                });
+
+                const data = await res.json();
+                const loadingElement = document.getElementById(loadingId);
+                if(loadingElement) loadingElement.remove();
+
+                if(data.sucesso) {
+                    adicionarMensagem(data.resposta, 'krom');
+                    historico.push({ role: "user", content: texto });
+                    historico.push({ role: "assistant", content: data.resposta });
+                } else {
+                    adicionarMensagem("Desculpe, a forja parou um segundo. Tente novamente.", 'krom');
+                }
+            } catch (err) {
+                const loadingElement = document.getElementById(loadingId);
+                if(loadingElement) loadingElement.remove();
+                adicionarMensagem("Erro de ligação com a oficina do Krom.", 'krom');
+            }
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function adicionarMensagem(texto, remetente, customId = null) {
+            const div = document.createElement('div');
+            div.className = `message ${remetente}`;
+            if(customId) div.id = customId;
+            div.innerText = texto;
+            messagesContainer.appendChild(div);
+        }
+
+        sendBtn.addEventListener('click', enviarMensagem);
+        userInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') enviarMensagem();
+        });
+    </script>
+</body>
+</html>
