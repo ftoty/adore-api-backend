@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oficina Adorê - Estúdio 3D Criativo</title>
+    
+    <!-- Three.js CDN para o Visualizador 3D Real -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- SDK Oficial do Mercado Pago para Bricks -->
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+
+    <style>
+        :root {
+            --bg-base: #0f0f11;
+            --bg-surface: #17171a;
+            --bg-card: #202024;
+            --accent-green: #C5F955;
+            --accent-pink: #FF97C2;
+            --text-main: #fafafa;
+            --text-muted: #94949e;
+            --border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-base); color: var(--text-main); font-family: 'Barlow', sans-serif; overflow: hidden; height: 100vh; width: 100vw; display: flex; flex-direction: column; }
+
+        /* Scrollbars customizadas */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
+
+        /* TOPO */
+        .top-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 56px;
+            width: 100%;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 16px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .logo-area { display: flex; align-items: center; gap: 10px; }
+        .logo-text { font-size: 16px; font-weight: 800; color: var(--accent-green); letter-spacing: 0.5px; cursor: pointer; text-transform: uppercase; }
+
+        .nav-menu { display: flex; align-items: center; gap: 4px; }
+        .dropdown-container { position: relative; }
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            border-radius: 6px;
+        }
+        .nav-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            width: 200px;
+            padding: 6px;
+            z-index: 101;
+        }
+        .dropdown-container.open .dropdown-menu { display: block; }
+        .dropdown-item {
+            display: block;
+            padding: 8px 10px;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-decoration: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .dropdown-item:hover { background: rgba(255,255,255,0.06); color: var(--text-main); }
+
+        .top-right-controls { display: flex; align-items: center; gap: 10px; }
+        .credits-badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #FFD700;
+            cursor: pointer;
+        }
+        .agent-status-pill {
+            background: rgba(197, 249, 85, 0.12);
+            color: var(--accent-green);
+            border: 1px solid rgba(197, 249, 85, 0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .upgrade-btn-top {
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-pink));
+            color: #000;
+            border: none;
+            padding: 5px 12px;
+            font-weight: 700;
+            font-size: 11px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .icon-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 6px; }
+        .icon-btn:hover { color: var(--text-main); }
+
+        /* GRID PRINCIPAL DE 3 COLUNAS */
+        .workspace-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr 300px;
+            width: 100%;
+            height: calc(100vh - 56px);
+            overflow: hidden;
+        }
+
+        /* SIDEBAR ESQUERDA */
+        .left-sidebar {
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 14px;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .tool-tabs-vertical { display: flex; flex-direction: column; gap: 4px; }
+        .tool-tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+        }
+        .tool-tab-btn:hover, .tool-tab-btn.active {
+            background: var(--bg-card);
+            color: var(--accent-green);
+            border: 1px solid var(--border-color);
+        }
+        .tool-settings-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        /* CANVAS CENTRAL & VISUALIZADOR 3D */
+        .center-canvas {
+            background: var(--bg-base);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .viewport-3d {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1b1b22 0%, #0f0f11 75%);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            outline: none;
+        }
+        .viewport-overlay-ui {
+            position: absolute;
+            bottom: 20px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .viewport-overlay-ui > * { pointer-events: auto; }
+        .generate-main-btn {
+            background: linear-gradient(135deg, var(--accent-green), var(--accent-pink));
+            color: #000;
+            border: none;
+            padding: 12px 28px;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(197, 249, 85, 0.3);
+            transition: transform 0.2s;
+        }
+        .generate-main-btn:hover { transform: scale(1.03); }
+
+        /* SIDEBAR DIREITA */
+        .right-sidebar {
+            background: var(--bg-surface);
+            border-left: 1px solid var(--border-color);
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .search-input-wrapper { position: relative; width: 100%; }
+        .search-input-wrapper input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 10px 8px 30px;
+            border-radius: 6px;
+            font-size: 12px;
+            outline: none;
+        }
+        .search-input-wrapper svg {
+            position: absolute; left: 10px; top: 10px; width: 12px; height: 12px; color: var(--text-muted);
+        }
+        .upload-action-btn {
+            background: var(--accent-green);
+            color: #000;
+            border: none;
+            padding: 8px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            text-align: center;
+            width: 100%;
+        }
+        .assets-grid-right {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        .asset-mini-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            height: 90px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .asset-mini-card:hover { border-color: var(--accent-green); }
+        .asset-mini-card img { width: 100%; height: 55px; object-fit: cover; border-radius: 4px; background: #222; }
+        .asset-mini-card span { font-size: 10px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
+
+        /* MODAIS GLOBAIS */
+        .krom-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); z-index: 999999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .krom-modal-card {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 12px; width: 380px; padding: 24px;
+            display: flex; flex-direction: column; gap: 16px; color: var(--text-main);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.9);
+        }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- CABEÇALHO -->
+    <header class="top-banner">
+        <div class="logo-area">
+            <span class="logo-text" onclick="alert('Oficina Adorê v1.0 - Estúdio 3D Ativo')">Oficina Adorê</span>
+        </div>
+
+        <nav class="nav-menu">
+            <button class="nav-btn" onclick="abrirComunidade()">Comunidade</button>
+            <button class="nav-btn" onclick="abrirAPI()">API</button>
+            
+            <div class="dropdown-container" onclick="toggleDropdown(this, event)">
+                <button class="nav-btn">Recursos ▾</button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" onclick="filtrarSecao('aprender')">Desbravar (Aprender)</a>
+                    <a class="dropdown-item" onclick="filtrarSecao('programas')">Programas</a>
+                    <a class="dropdown-item" onclick="filtrarSecao('plugins')">Plugins</a>
+                    <a class="dropdown-item" onclick="filtrarSecao('ferramentas')">Ferramentas</a>
+                </div>
+            </div>
+
+            <div class="dropdown-container" onclick="toggleDropdown(this, event)">
+                <button class="nav-btn">Laboratório Criativo ▾</button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" onclick="filtrarLab('figurinhas')">Figurinhas</a>
+                    <a class="dropdown-item" onclick="filtrarLab('chaveiros')">Chaveiros</a>
+                    <a class="dropdown-item" onclick="filtrarLab('utilidades')">Utilidades</a>
+                    <a class="dropdown-item" onclick="filtrarLab('sublimacao')">Sublimação</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="top-right-controls">
+            <button class="nav-btn" onclick="abrirModalAuth('login')" style="color: var(--accent-green); font-weight: 700;">Entrar</button>
+            <div class="agent-status-pill">🟢 Agente</div>
+            <div class="credits-badge" onclick="abrirModalUpgrade()" title="Créditos disponíveis">🟡 110</div>
+            <button class="upgrade-btn-top" onclick="abrirModalUpgrade()">Atualizar</button>
+            <button class="icon-btn" title="Histórico de Projetos" onclick="abrirHistoricoProjetos()">📂</button>
+            <button class="icon-btn" title="Notificações" onclick="abrirNotificacoes()">🔔</button>
+            <button class="icon-btn" title="Configurações & Admin" onclick="abrirPainelAdministrativo()">⚙️</button>
+        </div>
+    </header>
+
+    <!-- LAYOUT DE TRÊS COLUNAS -->
+    <div class="workspace-layout">
+        
+        <!-- Esquerda -->
+        <aside class="left-sidebar">
+            <div class="tool-tabs-vertical">
+                <button class="tool-tab-btn active" onclick="selecionarFerramenta('imagem', event)">🎨 Imagem</button>
+                <button class="tool-tab-btn" onclick="selecionarFerramenta('modelo', event)">🧊 Modelo 3D</button>
+                <button class="tool-tab-btn" onclick="selecionarFerramenta('imprimir', event)">🖨️ Imprimir</button>
+                <button class="tool-tab-btn" onclick="selecionarFerramenta('animar', event)">🎬 Animar</button>
+            </div>
+            <div class="tool-settings-box">
+                <span style="font-weight: 700; color: var(--text-main);">Configuração Ativa</span>
+                <span style="color: var(--text-muted);">Alto Detalhe • Adorê Engine</span>
+                <button onclick="alternarGeometria3D()" style="background: var(--bg-base); color: var(--accent-green); border: 1px solid var(--border-color); padding: 6px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; margin-top: 4px;">Trocar Malha 3D</button>
+            </div>
+        </aside>
+
+        <!-- Centro (Visualizador 3D Real com Three.js) -->
+        <main class="center-canvas">
+            <div class="viewport-3d">
+                <!-- Container WebGL -->
+                <div id="webgl-container"></div>
+
+                <!-- Interface Sobreposta -->
+                <div class="viewport-overlay-ui">
+                    <div style="background: rgba(15,15,17,0.8); padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted); backdrop-filter: blur(5px);">
+                        🖱️ Clique e arraste para rotacionar • Scroll para zoom
+                    </div>
+                    <button class="generate-main-btn" onclick="executarConversao3D()">✨ Gerar modelo</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Direita -->
+        <aside class="right-sidebar">
+            <div class="search-input-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" placeholder="Procura minha geração..." id="inputBuscaAtivos">
+            </div>
+            <button class="upload-action-btn" onclick="abrirCarregar()">Carregar</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                <p style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700;">Ativos Recentes</p>
+                <span onclick="abrirHistoricoProjetos()" style="font-size: 10px; color: var(--accent-green); cursor: pointer; text-decoration: underline;">Ver Todos</span>
+            </div>
+            <div class="assets-grid-right">
+                <div class="asset-mini-card" onclick="carregarMalhaPreset('esfera')"><img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&q=80"><span>Esfera PBR</span></div>
+                <div class="asset-mini-card" onclick="carregarMalhaPreset('torus')"><img src="https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=200&q=80"><span>Torus Adorê</span></div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- WIDGET FLUTUANTE -->
+    <div id="kromFloatingWidget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end;">
+        <div id="kromChatWindow" class="hidden" style="width: 360px; height: 480px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+            <div style="background: var(--bg-surface); padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+                <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">Assistente • Oficina Adorê</span>
+                <button id="fecharChatKrom" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;">✕</button>
+            </div>
+            <div id="kromChatMessages" style="flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
+                <div style="background: var(--bg-surface); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--accent-green); color: var(--text-main);">Olá! Assistente da Oficina Adorê na escuta. Como posso ajudar?</div>
+            </div>
+            <div style="padding: 10px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; gap: 6px;">
+                <input type="text" id="kromInputText" placeholder="Digite sua dúvida..." style="flex: 1; background: var(--bg-base); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 12px; outline: none;">
+                <button id="kromSendBtn" style="background: var(--accent-green); color: #000; border: none; padding: 0 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Enviar</button>
+            </div>
+        </div>
+        <div id="kromAvatarToggle" title="Abrir assistente" style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 3px solid var(--accent-green); box-shadow: 0 5px 25px rgba(0,0,0,0.9); cursor: pointer; background: #111; display: flex; align-items: center; justify-content: center;">
+            <video src="assets/krom-animacao.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'"></video>
+        </div>
+    </div>
+
+    <!-- CONTAINER DE MODAIS -->
+    <div id="kromModalContainer"></div>
+
+    <!-- SCRIPT CENTRAL E LÓGICA INTEGRADA (ESTÚDIO + THREE.JS + SUPABASE + IA + HISTÓRICO) -->
+    <script>
+        // ==========================================
+        // CONFIGURAÇÃO GLOBAL SUPABASE
+        // ==========================================
+        const SUPABASE_URL = "https://mlfgluwcuzddwijffrbe.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0"; 
+
+        let supabaseAppClient = null;
+        if (window.supabase) {
+            supabaseAppClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        // ==========================================
+        // 1. MOTOR DO VISUALIZADOR 3D (Three.js)
+        // ==========================================
+        let scene, camera, renderer, currentMesh;
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        function initThreeViewer() {
+            const container = document.getElementById('webgl-container');
+            if (!container) return;
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 0, 5);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            scene.add(ambientLight);
+
+            const pointLight1 = new THREE.PointLight(0xC5F955, 2, 50);
+            pointLight1.position.set(5, 5, 5);
+            scene.add(pointLight1);
+
+            const pointLight2 = new THREE.PointLight(0xFF97C2, 1.5, 50);
+            pointLight2.position.set(-5, -5, 5);
+            scene.add(pointLight2);
+
+            criarMalha3D('icosahedron');
+
+            container.addEventListener('mousedown', (e) => { isDragging = true; previousMousePosition = { x: e.clientX, y: e.clientY }; });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+            container.addEventListener('mousemove', (e) => {
+                if (!isDragging || !currentMesh) return;
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+
+                currentMesh.rotation.y += deltaX * 0.008;
+                currentMesh.rotation.x += deltaY * 0.008;
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                camera.position.z += e.deltaY * 0.002;
+                camera.position.z = Math.max(2, Math.min(10, camera.position.z));
+            }, { passive: false });
+
+            window.addEventListener('resize', () => {
+                if (!container) return;
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            animateViewer();
+        }
+
+        function criarMalha3D(tipo) {
+            if (currentMesh) scene.remove(currentMesh);
+
+            let geometry;
+            if (tipo === 'esfera') geometry = new THREE.SphereGeometry(1.2, 32, 32);
+            else if (tipo === 'torus') geometry = new THREE.TorusKnotGeometry(0.8, 0.3, 100, 16);
+            else geometry = new THREE.IcosahedronGeometry(1.3, 0);
+
+            const material = new THREE.MeshStandardMaterial({
+                color: 0xC5F955,
+                metalness: 0.85,
+                roughness: 0.25,
+                wireframe: false
+            });
+
+            currentMesh = new THREE.Mesh(geometry, material);
+            scene.add(currentMesh);
+        }
+
+        function alternarGeometria3D() {
+            const tipos = ['icosahedron', 'esfera', 'torus'];
+            const atual = tipos[Math.floor(Math.random() * tipos.length)];
+            criarMalha3D(atual);
+        }
+
+        function carregarMalhaPreset(nome) {
+            if (nome === 'esfera') criarMalha3D('esfera');
+            else criarMalha3D('torus');
+            alert(`Modelo "${nome.toUpperCase()}" carregado no visualizador 3D!`);
+        }
+
+        function animateViewer() {
+            requestAnimationFrame(animateViewer);
+            if (currentMesh && !isDragging) {
+                currentMesh.rotation.y += 0.004;
+            }
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // ==========================================
+        // 2. GERENCIAMENTO DE HISTÓRICO E PROJETOS
+        // ==========================================
+        function abrirHistoricoProjetos() {
+            const container = document.getElementById('kromModalContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card" style="width: 480px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">📂 Histórico & Galeria de Projetos</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Seus modelos salvos e gerações recentes na nuvem:</p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; padding-right: 4px;">
+                            <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px solid var(--border-color);">
+                                <div style="width: 40px; height: 40px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center;">🧊</div>
+                                <div style="flex: 1;">
+                                    <strong style="font-size: 12px; color: var(--text-main);">Esfera PBR Avançada</strong>
+                                    <p style="font-size: 10px; color: var(--text-muted);">Criado em: Hoje • 14:32</p>
+                                </div>
+                                <button onclick="alert('Carregando projeto...'); fecharModalGlobal();" style="background: var(--accent-green); color: #000; border: none; padding: 6px 10px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer;">Abrir</button>
+                            </div>
+                        </div>
+
+                        <button onclick="alert('Exportando todos os projetos em lote (.zip)...'); fecharModalGlobal();" style="background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-main); padding: 8px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; width: 100%;">Baixar Backup Completo</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // 3. NAVEGAÇÃO, MODAIS E MERCADO PAGO BRICK
+        // ==========================================
+        function toggleDropdown(element, event) {
+            event.stopPropagation();
+            const isOpen = element.classList.contains('open');
+            document.querySelectorAll('.dropdown-container').forEach(el => el.classList.remove('open'));
+            if (!isOpen) element.classList.add('open');
+        }
+
+        window.addEventListener('click', () => {
+            document.querySelectorAll('.dropdown-container').forEach(el => el.classList.remove('open'));
+        });
+
+        function fecharModalGlobal() {
+            const container = document.getElementById('kromModalContainer');
+            if (container) container.innerHTML = '';
+        }
+
+        function abrirComunidade() {
+            const container = document.getElementById('kromModalContainer');
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">Comunidade Clã Adorê</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Conecte-se com criadores e compartilhe malhas 3D.</p>
+                        <button onclick="window.open('https://discord.com', '_blank')" style="background: #5865F2; color: #fff; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Discord Oficial do Clã</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function abrirAPI() {
+            const container = document.getElementById('kromModalContainer');
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">API & Integrações</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Sua chave de acesso ativa:</p>
+                        <input type="text" readonly value="adore_live_token_88392019482" style="background: var(--bg-base); color: var(--accent-green); border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; font-size: 11px; width: 100%; text-align: center;">
+                        <button onclick="alert('Chave copiada!'); fecharModalGlobal();" style="background: var(--accent-green); color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Copiar Chave</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function filtrarLab(categoria) {
+            const container = document.getElementById('kromModalContainer');
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: var(--accent-pink); font-size: 16px;">🧪 Lab: ${categoria.toUpperCase()}</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Módulo especializado para ${categoria}.</p>
+                        <button onclick="alert('Processando ${categoria}...'); fecharModalGlobal();" style="background: var(--accent-green); color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Executar Módulo</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function filtrarSecao(secao) {
+            alert(`📚 Acessando seção de recursos: ${secao.toUpperCase()}`);
+        }
+
+        function abrirNotificacoes() {
+            const container = document.getElementById('kromModalContainer');
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">Notificações</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <div style="background: var(--bg-surface); padding: 10px; border-radius: 6px; font-size: 12px;">
+                            <p style="color: var(--text-main); font-weight: bold;">Renderização Concluída</p>
+                            <p style="color: var(--text-muted); font-size: 11px;">O modelo 3D foi gerado com sucesso.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function abrirPainelAdministrativo() {
+            const container = document.getElementById('kromModalContainer');
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card" style="width: 440px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">⚙️ Painel de Configurações & Admin</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <label style="font-size: 12px; display: flex; align-items: center; gap: 8px;"><input type="checkbox" checked> Otimização automática de malha</label>
+                        <label style="font-size: 12px; display: flex; align-items: center; gap: 8px;"><input type="checkbox" checked> Sincronização automática com Supabase</label>
+                        <button onclick="alert('Configurações salvas!'); fecharModalGlobal();" style="background: var(--accent-green); color: #000; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Salvar</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // MODAL DE UPGRADE COM PAYMENT BRICK (INTEGRADO À EDGE FUNCTION)
+        // ==========================================
+        async function abrirModalUpgrade() {
+            const container = document.getElementById('kromModalContainer');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card" style="width: 480px; max-height: 90vh; overflow-y: auto;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">Plano Mestre Adorê (R$ 49,00)</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted);">Insira os dados de pagamento abaixo para desbloquear o estúdio completo:</p>
+                        
+                        <!-- Container onde o Payment Brick do Mercado Pago será injetado -->
+                        <div id="paymentBrick_container"></div>
+                    </div>
+                </div>
+            `;
+
+            if (window.MercadoPago) {
+                try {
+                    const mp = new window.MercadoPago('APP_USR-fc44fd7b-f168-49bd-a726-0caaa44f098d', {
+                        locale: 'pt-BR'
+                    });
+
+                    const bricksBuilder = mp.bricks();
+
+                    await bricksBuilder.create("payment", "paymentBrick_container", {
+                        initialization: {
+                            amount: 49.00,
+                            preferenceId: "",
+                        },
+                        customization: {
+                            paymentMethods: {
+                                creditCard: "all",
+                                ticket: "all",
+                                bankTransfer: "all",
+                            },
+                        },
+                        callbacks: {
+                            onReady: () => {
+                                console.log("Payment Brick está pronto.");
+                            },
+                            onSubmit: async ({ selectedPaymentMethod, formData }) => {
+                                const { data: { user } } = await supabaseAppClient.auth.getUser();
+                                if (!user) {
+                                    alert("Você precisa estar logado para concluir a assinatura!");
+                                    abrirModalAuth('login');
+                                    return;
+                                }
+
+                                try {
+                                    alert("Processando pagamento seguro através da Edge Function...");
+
+                                    // Chamada segura para a Edge Function processar-pagamento com validação de backend
+                                    const { data: paymentResult, error } = await supabaseAppClient.functions.invoke('processar-pagamento', {
+                                        body: { 
+                                            formData, 
+                                            produtoTipo: 'mestre' 
+                                        }
+                                    });
+
+                                    if (error) throw error;
+
+                                    if (paymentResult.status === "approved") {
+                                        alert(`🎉 Pagamento Aprovado! Bem-vindo ao Plano Mestre Adorê. ID: ${paymentResult.id}`);
+                                        fecharModalGlobal();
+                                        window.location.reload();
+                                    } else if (paymentResult.status === "in_process" || paymentResult.status === "pending") {
+                                        alert("⏳ Pagamento pendente ou em análise. Assim que compensar, liberaremos seu acesso!");
+                                        fecharModalGlobal();
+                                    } else {
+                                        alert(`❌ O pagamento não pôde ser processado. Motivo: ${paymentResult.status_detail || 'Erro desconhecido'}`);
+                                    }
+                                } catch (error) {
+                                    console.error("Erro na requisição de pagamento:", error);
+                                    alert("Ocorreu um erro ao comunicar com o servidor de pagamentos.");
+                                }
+                            },
+                            onError: (error) => {
+                                console.error("Erro no Payment Brick:", error);
+                            },
+                        },
+                    });
+                } catch (e) {
+                    console.error("Erro ao carregar o Payment Brick:", e);
+                }
+            }
+        }
+
+        function abrirModalAuth(tipo) {
+            const container = document.getElementById('kromModalContainer');
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card" style="width: 380px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">Acessar Oficina Adorê</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <button onclick="loginComGoogleReal()" style="background: #fff; color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Continuar com o Google</button>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <input type="email" id="inputEmailReal" placeholder="E-mail" style="background: var(--bg-base); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;">
+                            <input type="password" id="inputSenhaReal" placeholder="Senha" style="background: var(--bg-base); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;">
+                            <button onclick="loginComEmailReal(document.getElementById('inputEmailReal').value, document.getElementById('inputSenhaReal').value)" style="background: var(--accent-green); color: #000; border: none; padding: 9px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Entrar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selecionarFerramenta(ferramenta, event) {
+            document.querySelectorAll('.tool-tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+        }
+
+        function executarConversao3D() {
+            const promptIA = prompt("Descreva o modelo 3D que deseja gerar por IA:");
+            if (!promptIA) return;
+            alert(`✨ Oficina Adorê: Gerando "${promptIA}" via IA...`);
+            alternarGeometria3D();
+        }
+
+        function abrirCarregar() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.onchange = e => alert(`📁 ${e.target.files.length} arquivo(s) carregado(s)!`);
+            input.click();
+        }
+
+        // ==========================================
+        // AUTENTICAÇÃO E SESSÃO SUPABASE
+        // ==========================================
+        document.addEventListener("DOMContentLoaded", async () => {
+            initThreeViewer();
+
+            const avatarToggle = document.getElementById("kromAvatarToggle");
+            const chatWindow = document.getElementById("kromChatWindow");
+            const fecharChat = document.getElementById("fecharChatKrom");
+
+            if (avatarToggle && chatWindow) avatarToggle.addEventListener("click", () => chatWindow.classList.toggle("hidden"));
+            if (fecharChat && chatWindow) fecharChat.addEventListener("click", () => chatWindow.classList.add("hidden"));
+
+            const inputTxt = document.getElementById("kromInputText");
+            const sendBtn = document.getElementById("kromSendBtn");
+            const msgs = document.getElementById("kromChatMessages");
+
+            function enviarMsg() {
+                if (!inputTxt || !inputTxt.value.trim()) return;
+                const txt = inputTxt.value.trim();
+                
+                const usr = document.createElement('div');
+                usr.style.cssText = 'background: rgba(197, 249, 85, 0.15); color: var(--accent-green); padding: 8px 12px; border-radius: 8px; align-self: flex-end; max-width: 85%;';
+                usr.textContent = txt;
+                msgs.appendChild(usr);
+                inputTxt.value = '';
+                msgs.scrollTop = msgs.scrollHeight;
+
+                setTimeout(() => {
+                    const bot = document.createElement('div');
+                    bot.style.cssText = 'background: var(--bg-surface); color: var(--text-main); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--accent-green);';
+                    bot.textContent = `Assistente: Entendi sua ideia sobre "${txt}". Vamos forjar!`;
+                    msgs.appendChild(bot);
+                    msgs.scrollTop = msgs.scrollHeight;
+                }, 500);
+            }
+
+            if (sendBtn && inputTxt) {
+                sendBtn.addEventListener('click', enviarMsg);
+                inputTxt.addEventListener('keypress', e => { if (e.key === 'Enter') enviarMsg(); });
+            }
+
+            if (supabaseAppClient) {
+                const { data: { session } > searchSession = await supabaseAppClient.auth.getSession();
+                const sessionData = await supabaseAppClient.auth.getSession();
+                const activeSession = sessionData.data.session;
+                
+                if (activeSession && activeSession.user) {
+                    atualizarTopoUsuarioLogado(activeSession.user);
+                }
+
+                supabaseAppClient.auth.onAuthStateChange((event, session) => {
+                    if (session && session.user) {
+                        atualizarTopoUsuarioLogado(session.user);
+                    }
+                });
+            }
+        });
+
+        async function loginComGoogleReal() {
+            if (!supabaseAppClient) return alert("Supabase não inicializado.");
+            const { error } = await supabaseAppClient.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: window.location.href }
+            });
+            if (error) alert("Erro no login com Google: " + error.message);
+        }
+
+        async function loginComEmailReal(email, senha) {
+            if (!supabaseAppClient) return alert("Supabase não inicializado.");
+            
+            const { data, error } = await supabaseAppClient.auth.signInWithPassword({ email, password: senha });
+            if (error) {
+                alert("Erro no login: " + error.message);
+            } else {
+                alert("Login efetuado com sucesso na Oficina Adorê!");
+                fecharModalGlobal();
+                atualizarTopoUsuarioLogado(data.user);
+            }
+        }
+
+        function atualizarTopoUsuarioLogado(user) {
+            const topoControles = document.querySelector('.top-right-controls');
+            if (!topoControles) return;
+
+            const btnEntrar = topoControles.querySelector('button[onclick*="abrirModalAuth"]');
+            if (btnEntrar) btnEntrar.remove();
+
+            let userBadge = document.getElementById('userProfileBadge');
+            if (!userBadge) {
+                userBadge = document.createElement('div');
+                userBadge.id = 'userProfileBadge';
+                userBadge.style.cssText = 'background: var(--bg-card); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 20px; font-size: 11px; display: flex; align-items: center; gap: 6px; color: var(--accent-green); cursor: pointer;';
+                userBadge.title = 'Clique para sair da sessão';
+                userBadge.onclick = async () => {
+                    if (supabaseAppClient) await supabaseAppClient.auth.signOut();
+                    window.location.reload();
+                };
+                userBadge.innerHTML = `👤 ${user.email.split('@')[0]} <span style="font-size: 9px; color: var(--text-muted);">(Sair)</span>`;
+                topoControles.insertBefore(userBadge, topoControles.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>
