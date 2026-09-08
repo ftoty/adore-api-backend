@@ -9,6 +9,28 @@ function toggleDropdown(element, event) {
 window.addEventListener('click', () => {
     document.querySelectorAll('.dropdown-container').forEach(el => el.classList.remove('open'));
 });
+// ==========================================
+// ESTADO GLOBAL DO MERCADO PAGO (instância única)
+// ==========================================
+const MP_PUBLIC_KEY = 'TEST-e08f5487-779a-447d-9b0c-7a2b05578f6c'; // troque por APP_USR-... em produção
+let mpInstanceGlobal = null;
+
+function getMercadoPagoInstance() {
+    if (!window.MercadoPago) {
+        throw new Error("SDK do Mercado Pago (v2) não foi injetado no <head>.");
+    }
+    if (!mpInstanceGlobal) {
+        mpInstanceGlobal = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+    }
+    return mpInstanceGlobal;
+}
+
+// Espera o navegador aplicar o layout (dois frames) antes de criar os iframes seguros.
+function aguardarLayout() {
+    return new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+    );
+}
 
 // Funções de Fechamento de Modais
 function fecharModalGlobal() {
@@ -166,7 +188,6 @@ function abrirModalUpgrade() {
         </div>
     `;
 }
-
 async function inicializarBrickMercadoPago() {
     const containerBrick = document.getElementById('paymentBrick_container');
     if (!containerBrick) {
@@ -177,15 +198,14 @@ async function inicializarBrickMercadoPago() {
     containerBrick.innerHTML = '<div style="text-align:center; padding: 20px; font-size:12px; color:var(--text-muted);">Carregando painel de pagamento seguro...</div>';
 
     try {
-        if (!window.MercadoPago) {
-            throw new Error("SDK do Mercado Pago não foi injetado.");
-        }
-
-        const mp = new window.MercadoPago('APP_USR-fc44fd7b-f168-49bd-a726-0caaa44f098d', {
-            locale: 'pt-BR'
-        });
-
+        const mp = getMercadoPagoInstance();
         const bricksBuilder = mp.bricks();
+
+        // Desmonta um Brick anterior, se existir, antes de recriar
+        if (window.paymentBrickController) {
+            await window.paymentBrickController.unmount();
+            window.paymentBrickController = null;
+        }
 
         const settings = {
             initialization: {
@@ -212,8 +232,8 @@ async function inicializarBrickMercadoPago() {
 
                     try {
                         const { data: paymentResult, error } = await supabaseAppClient.functions.invoke('processar-pagamento', {
-                            body: { 
-                                payment: formData, 
+                            body: {
+                                payment: formData,
                                 product: "mestre_artesao",
                                 userId: user.id
                             }
@@ -242,7 +262,9 @@ async function inicializarBrickMercadoPago() {
             },
         };
 
+        // Limpa o "carregando" e ESPERA o layout aplicar antes de montar os iframes
         containerBrick.innerHTML = "";
+        await aguardarLayout();
 
         window.paymentBrickController = await bricksBuilder.create(
             "payment",
