@@ -196,50 +196,48 @@ async function inicializarBrickMercadoPago() {
                     creditCard: "all",
                     ticket: "all",
                     bankTransfer: "all",
-                    atm: "all",
                 },
             },
             callbacks: {
                 onReady: () => {
-                    console.log("Payment Brick renderizado com sucesso na Oficina Adorê!");
+                    console.log("Payment Brick pronto e carregado.");
                 },
-                onSubmit: ({ selectedPaymentMethod, formData }) => {
-                    return new Promise(async (resolve, reject) => {
-                        try {
-                            const response = await fetch("https://mlfgluwcuzddwijffrbe.supabase.co/functions/v1/processar-pagamento", {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                    product: "mestre_artesao",
-                                    payment: formData
-                                })
-                            });
+                onSubmit: async ({ selectedPaymentMethod, formData }) => {
+                    const { data: { user } } = await supabaseAppClient.auth.getUser();
+                    if (!user) {
+                        alert("Você precisa estar logado para assinar!");
+                        abrirModalAuth('login');
+                        return;
+                    }
 
-                            const data = await response.json();
-
-                            if (!response.ok) {
-                                throw new Error(data.message || "Erro ao processar o pagamento no servidor.");
+                    try {
+                        const { data: paymentResult, error } = await supabaseAppClient.functions.invoke('processar-pagamento', {
+                            body: { 
+                                payment: formData, 
+                                product: "mestre_artesao",
+                                userId: user.id
                             }
+                        });
 
-                            if (data.approved) {
-                                alert("🎉 Assinatura do Plano Mestre realizada com sucesso! Bem-vindo à Oficina Adorê.");
-                                resolve();
-                                fecharModalGlobal();
-                            } else {
-                                alert("O pagamento não foi aprovado. Status: " + (data.status || "rejeitado"));
-                                reject();
-                            }
-                        } catch (error) {
-                            console.error("Erro no envio do pagamento:", error);
-                            alert("Erro ao processar pagamento: " + error.message);
-                            reject(error);
+                        if (error) throw error;
+
+                        if (paymentResult.approved || paymentResult.status === "approved") {
+                            alert("🎉 Assinatura realizada com sucesso!");
+                            fecharModalGlobal();
+                            window.location.reload();
+                        } else if (paymentResult.status === "in_process" || paymentResult.status === "pending") {
+                            alert("⏳ Pagamento pendente ou em análise.");
+                            fecharModalGlobal();
+                        } else {
+                            alert("O pagamento não foi aprovado. Status: " + (paymentResult.status_detail || paymentResult.status));
                         }
-                    });
+                    } catch (err) {
+                        console.error("Erro ao processar pagamento:", err);
+                        alert("Erro de comunicação com o servidor de pagamentos.");
+                    }
                 },
                 onError: (error) => {
-                    console.error("Erro retornado pelo Payment Brick:", error);
+                    console.error("Erro estrutural no Payment Brick:", error);
                 },
             },
         };
