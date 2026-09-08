@@ -9,11 +9,13 @@ function toggleDropdown(element, event) {
 window.addEventListener('click', () => {
     document.querySelectorAll('.dropdown-container').forEach(el => el.classList.remove('open'));
 });
+
 // ==========================================
 // ESTADO GLOBAL DO MERCADO PAGO (instância única)
 // ==========================================
 const MP_PUBLIC_KEY = 'TEST-e08f5487-779a-447d-9b0c-7a2b05578f6c'; // troque por APP_USR-... em produção
 let mpInstanceGlobal = null;
+let paymentBrickControllerGlobal = null;
 
 function getMercadoPagoInstance() {
     if (!window.MercadoPago) {
@@ -34,6 +36,14 @@ function aguardarLayout() {
 
 // Funções de Fechamento de Modais
 function fecharModalGlobal() {
+    if (paymentBrickControllerGlobal) {
+        try {
+            paymentBrickControllerGlobal.unmount();
+        } catch (e) {
+            console.error("Erro ao desmontar o Brick:", e);
+        }
+        paymentBrickControllerGlobal = null;
+    }
     const container = document.getElementById('kromModalContainer');
     if (container) container.innerHTML = '';
 }
@@ -188,6 +198,7 @@ function abrirModalUpgrade() {
         </div>
     `;
 }
+
 async function inicializarBrickMercadoPago() {
     const containerBrick = document.getElementById('paymentBrick_container');
     if (!containerBrick) {
@@ -198,14 +209,10 @@ async function inicializarBrickMercadoPago() {
     containerBrick.innerHTML = '<div style="text-align:center; padding: 20px; font-size:12px; color:var(--text-muted);">Carregando painel de pagamento seguro...</div>';
 
     try {
+        await aguardarLayout();
+
         const mp = getMercadoPagoInstance();
         const bricksBuilder = mp.bricks();
-
-        // Desmonta um Brick anterior, se existir, antes de recriar
-        if (window.paymentBrickController) {
-            await window.paymentBrickController.unmount();
-            window.paymentBrickController = null;
-        }
 
         const settings = {
             initialization: {
@@ -216,57 +223,57 @@ async function inicializarBrickMercadoPago() {
                     creditCard: "all",
                     ticket: "all",
                     bankTransfer: "all",
+                    atm: "all",
                 },
             },
             callbacks: {
                 onReady: () => {
-                    console.log("Payment Brick pronto e carregado.");
+                    console.log("Payment Brick renderizado com sucesso na Oficina Adorê!");
                 },
-                onSubmit: async ({ selectedPaymentMethod, formData }) => {
-                    const { data: { user } } = await supabaseAppClient.auth.getUser();
-                    if (!user) {
-                        alert("Você precisa estar logado para assinar!");
-                        abrirModalAuth('login');
-                        return;
-                    }
+                onSubmit: ({ selectedPaymentMethod, formData }) => {
+                    return new Promise(async (resolve, reject) => {
+                        try {
+                            const response = await fetch("https://mlfgluwcuzddwijffrbe.supabase.co/functions/v1/processar-pagamento", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    product: "mestre_artesao",
+                                    payment: formData
+                                })
+                            });
 
-                    try {
-                        const { data: paymentResult, error } = await supabaseAppClient.functions.invoke('processar-pagamento', {
-                            body: {
-                                payment: formData,
-                                product: "mestre_artesao",
-                                userId: user.id
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.message || "Erro ao processar o pagamento no servidor.");
                             }
-                        });
 
-                        if (error) throw error;
-
-                        if (paymentResult.approved || paymentResult.status === "approved") {
-                            alert("🎉 Assinatura realizada com sucesso!");
-                            fecharModalGlobal();
-                            window.location.reload();
-                        } else if (paymentResult.status === "in_process" || paymentResult.status === "pending") {
-                            alert("⏳ Pagamento pendente ou em análise.");
-                            fecharModalGlobal();
-                        } else {
-                            alert("O pagamento não foi aprovado. Status: " + (paymentResult.status_detail || paymentResult.status));
+                            if (data.approved || data.status === "approved") {
+                                alert("🎉 Assinatura do Plano Mestre realizada com sucesso! Bem-vindo à Oficina Adorê.");
+                                resolve();
+                                fecharModalGlobal();
+                            } else {
+                                alert("O pagamento não foi aprovado. Status: " + (data.status || "rejeitado"));
+                                reject();
+                            }
+                        } catch (error) {
+                            console.error("Erro no envio do pagamento:", error);
+                            alert("Erro ao processar pagamento: " + error.message);
+                            reject(error);
                         }
-                    } catch (err) {
-                        console.error("Erro ao processar pagamento:", err);
-                        alert("Erro de comunicação com o servidor de pagamentos.");
-                    }
+                    });
                 },
                 onError: (error) => {
-                    console.error("Erro estrutural no Payment Brick:", error);
+                    console.error("Erro retornado pelo Payment Brick:", error);
                 },
             },
         };
 
-        // Limpa o "carregando" e ESPERA o layout aplicar antes de montar os iframes
         containerBrick.innerHTML = "";
-        await aguardarLayout();
 
-        window.paymentBrickController = await bricksBuilder.create(
+        paymentBrickControllerGlobal = await bricksBuilder.create(
             "payment",
             "paymentBrick_container",
             settings
