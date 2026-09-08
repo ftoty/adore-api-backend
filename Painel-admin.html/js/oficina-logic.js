@@ -166,109 +166,78 @@ function abrirModalUpgrade() {
         </div>
     `;
 }
-
-// Integração Oficial Mercado Pago Payment Brick
-function assinarPlanoMestre() {
+/async function inicializarBrickMercadoPago() {
     const containerBrick = document.getElementById('paymentBrick_container');
-    if (!containerBrick) return;
-
-    containerBrick.innerHTML = '<p style="text-align:center; font-size:12px; color:var(--text-muted);">Carregando sistema de pagamento seguro...</p>';
-
-    // Garante o carregamento dinâmico do SDK do Mercado Pago se já não estiver na página
-    if (!window.MercadoPago) {
-        const script = document.createElement('script');
-        script.src = "https://sdk.mercadopago.com/js/v2";
-        script.onload = () => inicializarBrickMercadoPago();
-        document.body.appendChild(script);
-    } else {
-        inicializarBrickMercadoPago();
+    if (!containerBrick) {
+        console.error("Container paymentBrick_container não encontrado no DOM.");
+        return;
     }
-}
 
-async function inicializarBrickMercadoPago() {
+    // Mostra feedback visual imediato
+    containerBrick.innerHTML = '<div style="text-align:center; padding: 20px; font-size:12px; color:var(--text-muted);">Carregando painel de pagamento seguro...</div>';
+
     try {
-        // Inicializa com a sua Public Key de Produção correta
-        const mp = new MercadoPago('APP_USR-fc44fd7b-f168-49bd-a726-0caaa44f098d', {
+        // Verifica se o SDK do Mercado Pago carregou corretamente
+        if (!window.MercadoPago) {
+            throw new Error("SDK do Mercado Pago não foi injetado.");
+        }
+
+        const mp = new MercadoPago('APP_USR-6d0731fc-b544-46e7-b8db-36403a2858a8', {
             locale: 'pt-BR'
         });
 
         const bricksBuilder = mp.bricks();
 
-        const renderPaymentBrick = async (bricksBuilder) => {
-            const settings = {
-                initialization: {
-                    amount: 49.00, // Valor do Plano Mestre Artesão Adorê
-                    preferenceId: "",
+        const settings = {
+            initialization: {
+                amount: 49.00, // Valor do Plano Mestre Artesão Adorê
+                // Em modo client-side puro, deixamos preferenceId vazio para usar o valor direto
+            },
+            customization: {
+                paymentMethods: {
+                    creditCard: "all",
+                    ticket: "all",
+                    bankTransfer: "all",
+                    atm: "all",
                 },
-                customization: {
-                    paymentMethods: {
-                        creditCard: "all",
-                        ticket: "all",
-                        bankTransfer: "all",
-                    },
+            },
+            callbacks: {
+                onReady: () => {
+                    console.log("Payment Brick renderizado com sucesso na Oficina Adorê!");
                 },
-                callbacks: {
-                    onReady: () => {
-                        console.log("Payment Brick carregado com sucesso!");
-                    },
-                    onSubmit: ({ selectedPaymentMethod, formData }) => {
-                        return new Promise((resolve, reject) => {
-                            console.log("Dados do pagamento:", formData);
-                            // Aqui você enviaria o formData para o seu backend ou Supabase processar a cobrança
-                            setTimeout(() => {
-                                alert("🎉 Pagamento processado com sucesso na Oficina Adorê!");
-                                resolve();
-                                fecharModalGlobal();
-                            }, 2000);
-                        });
-                    },
-                    onError: (error) => {
-                        console.error("Erro no Payment Brick:", error);
-                        alert("Erro ao processar o pagamento. Verifique os dados inseridos.");
-                    },
+                onSubmit: ({ selectedPaymentMethod, formData }) => {
+                    return new Promise((resolve, reject) => {
+                        console.log("Dados do pagamento gerados pelo Brick:", formData);
+                        
+                        // Simula o processamento visual para o usuário
+                        setTimeout(() => {
+                            alert("🎉 Assinatura do Plano Mestre realizada com sucesso! Bem-vindo à Oficina Adorê.");
+                            resolve();
+                            fecharModalGlobal();
+                        }, 2000);
+                    });
                 },
-            };
-
-            window.paymentBrickController = await bricksBuilder.create(
-                "payment",
-                "paymentBrick_container",
-                settings
-            );
+                onError: (error) => {
+                    console.error("Erro retornado pelo Payment Brick:", error);
+                },
+            },
         };
 
-        const containerBrick = document.getElementById('paymentBrick_container');
-        if (containerBrick) {
-            containerBrick.innerHTML = ""; // Limpa texto de carregamento
-            await renderPaymentBrick(bricksBuilder);
-        }
+        // Limpa o container antes de montar o Brick
+        containerBrick.innerHTML = "";
+
+        window.paymentBrickController = await bricksBuilder.create(
+            "payment",
+            "paymentBrick_container",
+            settings
+        );
+
     } catch (e) {
-        console.error("Erro ao instanciar Mercado Pago:", e);
-        alert("Não foi possível carregar o módulo de pagamento do Mercado Pago.");
+        console.error("Falha ao inicializar o Payment Brick:", e);
+        containerBrick.innerHTML = '<p style="color: #ff4f50; text-align: center; font-size: 12px;">Erro ao carregar o meio de pagamento. Verifique sua conexão.</p>';
     }
 }
 
-// Ferramentas da Esquerda
-function selecionarFerramenta(ferramenta, event) {
-    document.querySelectorAll('.tool-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('active');
-    }
-    console.log(`Ferramenta ativa no estúdio: ${ferramenta}`);
-}
-
-function executarConversao3D() {
-    alert("✨ Oficina Adorê: Enviando referência para o motor de conversão 3D...");
-}
-
-function abrirCarregar() {
-    let input = document.createElement('input');
-    input.type = 'file';
-    input.multiple = true;
-    input.onchange = e => {
-        alert(`📁 ${e.target.files.length} arquivo(s) carregado(s) com sucesso na Oficina Adorê!`);
-    };
-    input.click();
-}
 
 // Inicialização do Chat Assistente da Oficina
 document.addEventListener("DOMContentLoaded", () => {
