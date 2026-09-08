@@ -27,13 +27,11 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background-color: var(--bg-base); color: var(--text-main); font-family: 'Barlow', sans-serif; overflow: hidden; height: 100vh; width: 100vw; display: flex; flex-direction: column; }
 
-        /* Scrollbars customizadas */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-base); }
         ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--accent-green); }
 
-        /* TOPO */
         .top-banner {
             display: flex;
             align-items: center;
@@ -125,7 +123,6 @@
         .icon-btn { background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 6px; }
         .icon-btn:hover { color: var(--text-main); }
 
-        /* GRID PRINCIPAL DE 3 COLUNAS */
         .workspace-layout {
             display: grid;
             grid-template-columns: 240px 1fr 300px;
@@ -134,7 +131,6 @@
             overflow: hidden;
         }
 
-        /* SIDEBAR ESQUERDA */
         .left-sidebar {
             background: var(--bg-surface);
             border-right: 1px solid var(--border-color);
@@ -176,7 +172,6 @@
             font-size: 12px;
         }
 
-        /* CANVAS CENTRAL & VISUALIZADOR 3D */
         .center-canvas {
             background: var(--bg-base);
             padding: 20px;
@@ -233,7 +228,6 @@
         }
         .generate-main-btn:hover { transform: scale(1.03); }
 
-        /* SIDEBAR DIREITA */
         .right-sidebar {
             background: var(--bg-surface);
             border-left: 1px solid var(--border-color);
@@ -291,7 +285,6 @@
         .asset-mini-card img { width: 100%; height: 55px; object-fit: cover; border-radius: 4px; background: #222; }
         .asset-mini-card span { font-size: 10px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
 
-        /* MODAIS GLOBAIS */
         .krom-modal-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: rgba(0, 0, 0, 0.75); z-index: 999999;
@@ -308,7 +301,6 @@
 </head>
 <body>
 
-    <!-- CABEÇALHO -->
     <header class="top-banner">
         <div class="logo-area">
             <span class="logo-text" onclick="alert('Oficina Adorê v1.0 - Estúdio 3D Ativo')">Oficina Adorê</span>
@@ -350,10 +342,7 @@
         </div>
     </header>
 
-    <!-- LAYOUT DE TRÊS COLUNAS -->
     <div class="workspace-layout">
-        
-        <!-- Esquerda -->
         <aside class="left-sidebar">
             <div class="tool-tabs-vertical">
                 <button class="tool-tab-btn active" onclick="selecionarFerramenta('imagem', event)">🎨 Imagem</button>
@@ -368,13 +357,9 @@
             </div>
         </aside>
 
-        <!-- Centro (Visualizador 3D Real com Three.js) -->
         <main class="center-canvas">
             <div class="viewport-3d">
-                <!-- Container WebGL -->
                 <div id="webgl-container"></div>
-
-                <!-- Interface Sobreposta -->
                 <div class="viewport-overlay-ui">
                     <div style="background: rgba(15,15,17,0.8); padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted); backdrop-filter: blur(5px);">
                         🖱️ Clique e arraste para rotacionar • Scroll para zoom
@@ -384,7 +369,6 @@
             </div>
         </main>
 
-        <!-- Direita -->
         <aside class="right-sidebar">
             <div class="search-input-wrapper">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -402,7 +386,6 @@
         </aside>
     </div>
 
-    <!-- WIDGET FLUTUANTE -->
     <div id="kromFloatingWidget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end;">
         <div id="kromChatWindow" class="hidden" style="width: 360px; height: 480px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
             <div style="background: var(--bg-surface); padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
@@ -422,14 +405,9 @@
         </div>
     </div>
 
-    <!-- CONTAINER DE MODAIS -->
     <div id="kromModalContainer"></div>
 
-    <!-- SCRIPT CENTRAL E LÓGICA INTEGRADA (ESTÚDIO + THREE.JS + SUPABASE + IA + HISTÓRICO) -->
     <script>
-        // ==========================================
-        // CONFIGURAÇÃO GLOBAL SUPABASE
-        // ==========================================
         const SUPABASE_URL = "https://mlfgluwcuzddwijffrbe.supabase.co"; 
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0"; 
 
@@ -438,9 +416,26 @@
             supabaseAppClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        // ==========================================
-        // 1. MOTOR DO VISUALIZADOR 3D (Three.js)
-        // ==========================================
+        const MP_PUBLIC_KEY = 'TEST-e08f5487-779a-447d-9b0c-7a2b05578f6c'; 
+        let mpInstanceGlobal = null;
+        let paymentBrickControllerGlobal = null;
+
+        function getMercadoPagoInstance() {
+            if (!window.MercadoPago) {
+                throw new Error("SDK do Mercado Pago (v2) não foi injetado no <head>.");
+            }
+            if (!mpInstanceGlobal) {
+                mpInstanceGlobal = new window.MercadoPago(MP_PUBLIC_KEY, { locale: 'pt-BR' });
+            }
+            return mpInstanceGlobal;
+        }
+
+        function aguardarLayout() {
+            return new Promise((resolve) =>
+                requestAnimationFrame(() => requestAnimationFrame(resolve))
+            );
+        }
+
         let scene, camera, renderer, currentMesh;
         let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
@@ -541,9 +536,6 @@
             }
         }
 
-        // ==========================================
-        // 2. GERENCIAMENTO DE HISTÓRICO E PROJETOS
-        // ==========================================
         function abrirHistoricoProjetos() {
             const container = document.getElementById('kromModalContainer');
             if (!container) return;
@@ -574,9 +566,6 @@
             `;
         }
 
-        // ==========================================
-        // 3. NAVEGAÇÃO, MODAIS E MERCADO PAGO BRICK
-        // ==========================================
         function toggleDropdown(element, event) {
             event.stopPropagation();
             const isOpen = element.classList.contains('open');
@@ -589,6 +578,14 @@
         });
 
         function fecharModalGlobal() {
+            if (paymentBrickControllerGlobal) {
+                try {
+                    paymentBrickControllerGlobal.unmount();
+                } catch (e) {
+                    console.error("Erro ao desmontar Brick:", e);
+                }
+                paymentBrickControllerGlobal = null;
+            }
             const container = document.getElementById('kromModalContainer');
             if (container) container.innerHTML = '';
         }
@@ -681,10 +678,7 @@
             `;
         }
 
-        // ==========================================
-        // MODAL DE UPGRADE COM PAYMENT BRICK (INTEGRADO À EDGE FUNCTION)
-        // ==========================================
-        async function abrirModalUpgrade() {
+        function abrirModalUpgrade() {
             const container = document.getElementById('kromModalContainer');
             if (!container) return;
 
@@ -697,48 +691,53 @@
                         </div>
                         <p style="font-size: 12px; color: var(--text-muted);">Insira os dados de pagamento abaixo para desbloquear o estúdio completo:</p>
                         
-                        <!-- Container onde o Payment Brick do Mercado Pago será injetado -->
                         <div id="paymentBrick_container"></div>
                     </div>
                 </div>
             `;
 
-            if (window.MercadoPago) {
-                try {
-                    const mp = new window.MercadoPago('APP_USR-fc44fd7b-f168-49bd-a726-0caaa44f098d', {
-                        locale: 'pt-BR'
-                    });
+            inicializarBrickMercadoPago();
+        }
 
-                    const bricksBuilder = mp.bricks();
+        async function inicializarBrickMercadoPago() {
+            const containerBrick = document.getElementById('paymentBrick_container');
+            if (!containerBrick) return;
 
-                    await bricksBuilder.create("payment", "paymentBrick_container", {
-                        initialization: {
-                            amount: 49.00,
-                            preferenceId: "",
+            containerBrick.innerHTML = '<div style="text-align:center; padding: 20px; font-size:12px; color:var(--text-muted);">Carregando painel de pagamento seguro...</div>';
+
+            try {
+                await aguardarLayout();
+
+                const mp = getMercadoPagoInstance();
+                const bricksBuilder = mp.bricks();
+
+                const settings = {
+                    initialization: {
+                        amount: 49.00,
+                    },
+                    customization: {
+                        paymentMethods: {
+                            creditCard: "all",
+                            ticket: "all",
+                            bankTransfer: "all",
+                            atm: "all",
                         },
-                        customization: {
-                            paymentMethods: {
-                                creditCard: "all",
-                                ticket: "all",
-                                bankTransfer: "all",
-                            },
+                    },
+                    callbacks: {
+                        onReady: () => {
+                            console.log("Payment Brick renderizado com sucesso!");
                         },
-                        callbacks: {
-                            onReady: () => {
-                                console.log("Payment Brick está pronto.");
-                            },
-                            onSubmit: async ({ selectedPaymentMethod, formData }) => {
+                        onSubmit: ({ selectedPaymentMethod, formData }) => {
+                            return new Promise(async (resolve, reject) => {
                                 const { data: { user } } = await supabaseAppClient.auth.getUser();
                                 if (!user) {
                                     alert("Você precisa estar logado para concluir a assinatura!");
                                     abrirModalAuth('login');
+                                    reject();
                                     return;
                                 }
 
                                 try {
-                                    alert("Processando pagamento seguro através da Edge Function...");
-
-                                    // Chamada segura para a Edge Function processar-pagamento com validação de backend
                                     const { data: paymentResult, error } = await supabaseAppClient.functions.invoke('processar-pagamento', {
                                         body: { 
                                             formData, 
@@ -750,27 +749,36 @@
 
                                     if (paymentResult.status === "approved") {
                                         alert(`🎉 Pagamento Aprovado! Bem-vindo ao Plano Mestre Adorê. ID: ${paymentResult.id}`);
+                                        resolve();
                                         fecharModalGlobal();
                                         window.location.reload();
                                     } else if (paymentResult.status === "in_process" || paymentResult.status === "pending") {
-                                        alert("⏳ Pagamento pendente ou em análise. Assim que compensar, liberaremos seu acesso!");
+                                        alert("⏳ Pagamento pendente ou em análise.");
+                                        resolve();
                                         fecharModalGlobal();
                                     } else {
-                                        alert(`❌ O pagamento não pôde ser processado. Motivo: ${paymentResult.status_detail || 'Erro desconhecido'}`);
+                                        alert(`❌ O pagamento não pôde ser processado. Motivo: ${paymentResult.status_detail || 'Erro'}`);
+                                        reject();
                                     }
-                                } catch (error) {
-                                    console.error("Erro na requisição de pagamento:", error);
-                                    alert("Ocorreu um erro ao comunicar com o servidor de pagamentos.");
+                                } catch (err) {
+                                    console.error("Erro no envio do pagamento:", err);
+                                    alert("Erro ao processar pagamento.");
+                                    reject(err);
                                 }
-                            },
-                            onError: (error) => {
-                                console.error("Erro no Payment Brick:", error);
-                            },
+                            });
                         },
-                    });
-                } catch (e) {
-                    console.error("Erro ao carregar o Payment Brick:", e);
-                }
+                        onError: (error) => {
+                            console.error("Erro no Payment Brick:", error);
+                        },
+                    },
+                };
+
+                containerBrick.innerHTML = "";
+                paymentBrickControllerGlobal = await bricksBuilder.create("payment", "paymentBrick_container", settings);
+
+            } catch (e) {
+                console.error("Falha ao inicializar o Payment Brick:", e);
+                containerBrick.innerHTML = '<p style="color: #ff4f50; text-align: center; font-size: 12px;">Erro ao carregar o meio de pagamento.</p>';
             }
         }
 
@@ -814,9 +822,6 @@
             input.click();
         }
 
-        // ==========================================
-        // AUTENTICAÇÃO E SESSÃO SUPABASE
-        // ==========================================
         document.addEventListener("DOMContentLoaded", async () => {
             initThreeViewer();
 
@@ -857,7 +862,6 @@
             }
 
             if (supabaseAppClient) {
-                const { data: { session } } = await supabaseAppClient.auth.getSession();
                 const sessionData = await supabaseAppClient.auth.getSession();
                 const activeSession = sessionData.data.session;
                 
