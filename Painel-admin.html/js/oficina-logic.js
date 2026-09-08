@@ -157,7 +157,7 @@ function abrirModalUpgrade() {
                 <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border: 1px solid var(--accent-green); margin-bottom: 15px;">
                     <strong style="color: var(--accent-green); font-size: 14px;">Mestre Artesão Adorê</strong>
                     <p style="font-size: 11px; color: var(--text-muted); margin: 6px 0;">R$ 49,00/mês • Créditos ilimitados de IA • Prioridade na Fila</p>
-                    <button onclick="assinarPlanoMestre()" style="background: var(--accent-green); color: #000; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; width: 100%;">Prosseguir para Pagamento</button>
+                    <button onclick="inicializarBrickMercadoPago()" style="background: var(--accent-green); color: #000; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; width: 100%;">Prosseguir para Pagamento</button>
                 </div>
 
                 <!-- Container onde o Payment Brick do Mercado Pago será renderizado -->
@@ -166,23 +166,22 @@ function abrirModalUpgrade() {
         </div>
     `;
 }
-/async function inicializarBrickMercadoPago() {
+
+async function inicializarBrickMercadoPago() {
     const containerBrick = document.getElementById('paymentBrick_container');
     if (!containerBrick) {
         console.error("Container paymentBrick_container não encontrado no DOM.");
         return;
     }
 
-    // Mostra feedback visual imediato
     containerBrick.innerHTML = '<div style="text-align:center; padding: 20px; font-size:12px; color:var(--text-muted);">Carregando painel de pagamento seguro...</div>';
 
     try {
-        // Verifica se o SDK do Mercado Pago carregou corretamente
         if (!window.MercadoPago) {
             throw new Error("SDK do Mercado Pago não foi injetado.");
         }
 
-        const mp = new MercadoPago('APP_USR-6d0731fc-b544-46e7-b8db-36403a2858a8', {
+        const mp = new window.MercadoPago('APP_USR-fc44fd7b-f168-49bd-a726-0caaa44f098d', {
             locale: 'pt-BR'
         });
 
@@ -190,8 +189,7 @@ function abrirModalUpgrade() {
 
         const settings = {
             initialization: {
-                amount: 49.00, // Valor do Plano Mestre Artesão Adorê
-                // Em modo client-side puro, deixamos preferenceId vazio para usar o valor direto
+                amount: 49.00,
             },
             customization: {
                 paymentMethods: {
@@ -206,15 +204,38 @@ function abrirModalUpgrade() {
                     console.log("Payment Brick renderizado com sucesso na Oficina Adorê!");
                 },
                 onSubmit: ({ selectedPaymentMethod, formData }) => {
-                    return new Promise((resolve, reject) => {
-                        console.log("Dados do pagamento gerados pelo Brick:", formData);
-                        
-                        // Simula o processamento visual para o usuário
-                        setTimeout(() => {
-                            alert("🎉 Assinatura do Plano Mestre realizada com sucesso! Bem-vindo à Oficina Adorê.");
-                            resolve();
-                            fecharModalGlobal();
-                        }, 2000);
+                    return new Promise(async (resolve, reject) => {
+                        try {
+                            const response = await fetch("https://mlfgluwcuzddwijffrbe.supabase.co/functions/v1/processar-pagamento", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                    product: "mestre_artesao",
+                                    payment: formData
+                                })
+                            });
+
+                            const data = await response.json();
+
+                            if (!response.ok) {
+                                throw new Error(data.message || "Erro ao processar o pagamento no servidor.");
+                            }
+
+                            if (data.approved) {
+                                alert("🎉 Assinatura do Plano Mestre realizada com sucesso! Bem-vindo à Oficina Adorê.");
+                                resolve();
+                                fecharModalGlobal();
+                            } else {
+                                alert("O pagamento não foi aprovado. Status: " + (data.status || "rejeitado"));
+                                reject();
+                            }
+                        } catch (error) {
+                            console.error("Erro no envio do pagamento:", error);
+                            alert("Erro ao processar pagamento: " + error.message);
+                            reject(error);
+                        }
                     });
                 },
                 onError: (error) => {
@@ -223,7 +244,6 @@ function abrirModalUpgrade() {
             },
         };
 
-        // Limpa o container antes de montar o Brick
         containerBrick.innerHTML = "";
 
         window.paymentBrickController = await bricksBuilder.create(
@@ -237,7 +257,6 @@ function abrirModalUpgrade() {
         containerBrick.innerHTML = '<p style="color: #ff4f50; text-align: center; font-size: 12px;">Erro ao carregar o meio de pagamento. Verifique sua conexão.</p>';
     }
 }
-
 
 // Inicialização do Chat Assistente da Oficina
 document.addEventListener("DOMContentLoaded", () => {
