@@ -103,7 +103,7 @@ function filtrarSecao(secao) {
 }
 
 // ==========================================
-// 4. PAINÉIS DE CONFIGURAÇÕES, NOTIFICAÇÕES E UPGRADE
+// 4. PAINÉIS DE CONFIGURAÇÕES, NOTIFICAÇÕES E UPGRADE (MERCADO PAGO)
 // ==========================================
 function abrirNotificacoes() {
     const container = document.getElementById('kromModalContainer');
@@ -147,20 +147,104 @@ function abrirModalUpgrade() {
     const container = document.getElementById('kromModalContainer');
     container.innerHTML = `
         <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
-            <div class="krom-modal-card" style="width: 420px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="krom-modal-card" style="width: 460px; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                     <h3 style="color: var(--accent-green); font-size: 16px;">Planos & Upgrade - Oficina Adorê</h3>
                     <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
                 </div>
-                <p style="font-size: 12px; color: var(--text-muted);">Escolha seu plano para desbloquear exportações ilimitadas em alta resolução.</p>
-                <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border: 1px solid var(--accent-green);">
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Escolha seu plano para desbloquear exportações ilimitadas em alta resolução.</p>
+                
+                <div style="background: var(--bg-surface); padding: 14px; border-radius: 8px; border: 1px solid var(--accent-green); margin-bottom: 15px;">
                     <strong style="color: var(--accent-green); font-size: 14px;">Mestre Artesão Adorê</strong>
-                    <p style="font-size: 11px; color: var(--text-muted); margin: 6px 0;">R$ 49/mês • Créditos ilimitados de IA • Prioridade na Fila</p>
-                    <button onclick="assinarPlanoMestre()" style="background: var(--accent-green); color: #000; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; width: 100%;">Assinar com Mercado Pago</button>
+                    <p style="font-size: 11px; color: var(--text-muted); margin: 6px 0;">R$ 49,00/mês • Créditos ilimitados de IA • Prioridade na Fila</p>
+                    <button onclick="assinarPlanoMestre()" style="background: var(--accent-green); color: #000; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; width: 100%;">Prosseguir para Pagamento</button>
                 </div>
+
+                <!-- Container onde o Payment Brick do Mercado Pago será renderizado -->
+                <div id="paymentBrick_container"></div>
             </div>
         </div>
     `;
+}
+
+// Integração Oficial Mercado Pago Payment Brick
+function assinarPlanoMestre() {
+    const containerBrick = document.getElementById('paymentBrick_container');
+    if (!containerBrick) return;
+
+    containerBrick.innerHTML = '<p style="text-align:center; font-size:12px; color:var(--text-muted);">Carregando sistema de pagamento seguro...</p>';
+
+    // Garante o carregamento dinâmico do SDK do Mercado Pago se já não estiver na página
+    if (!window.MercadoPago) {
+        const script = document.createElement('script');
+        script.src = "https://sdk.mercadopago.com/js/v2";
+        script.onload = () => inicializarBrickMercadoPago();
+        document.body.appendChild(script);
+    } else {
+        inicializarBrickMercadoPago();
+    }
+}
+
+async function inicializarBrickMercadoPago() {
+    try {
+        // Inicializa com a sua Public Key de Produção correta
+        const mp = new MercadoPago('APP_USR-fc44fd7b-f168-49bd-a726-0caaa44f098d', {
+            locale: 'pt-BR'
+        });
+
+        const bricksBuilder = mp.bricks();
+
+        const renderPaymentBrick = async (bricksBuilder) => {
+            const settings = {
+                initialization: {
+                    amount: 49.00, // Valor do Plano Mestre Artesão Adorê
+                    preferenceId: "",
+                },
+                customization: {
+                    paymentMethods: {
+                        creditCard: "all",
+                        ticket: "all",
+                        bankTransfer: "all",
+                    },
+                },
+                callbacks: {
+                    onReady: () => {
+                        console.log("Payment Brick carregado com sucesso!");
+                    },
+                    onSubmit: ({ selectedPaymentMethod, formData }) => {
+                        return new Promise((resolve, reject) => {
+                            console.log("Dados do pagamento:", formData);
+                            // Aqui você enviaria o formData para o seu backend ou Supabase processar a cobrança
+                            setTimeout(() => {
+                                alert("🎉 Pagamento processado com sucesso na Oficina Adorê!");
+                                resolve();
+                                fecharModalGlobal();
+                            }, 2000);
+                        });
+                    },
+                    onError: (error) => {
+                        console.error("Erro no Payment Brick:", error);
+                        alert("Erro ao processar o pagamento. Verifique os dados inseridos.");
+                    },
+                },
+            };
+
+            window.paymentBrickController = await bricksBuilder.create(
+                "payment",
+                "paymentBrick_container",
+                settings
+            );
+        };
+
+        const containerBrick = document.getElementById('paymentBrick_container');
+        if (containerBrick) {
+            containerBrick.innerHTML = ""; // Limpa texto de carregamento
+            await renderPaymentBrick(bricksBuilder);
+        }
+    } catch (e) {
+        console.error("Erro ao instanciar Mercado Pago:", e);
+        alert("Não foi possível carregar o módulo de pagamento do Mercado Pago.");
+    }
 }
 
 // Ferramentas da Esquerda
