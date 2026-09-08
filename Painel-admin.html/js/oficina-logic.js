@@ -181,7 +181,7 @@ async function inicializarBrickMercadoPago() {
             throw new Error("SDK do Mercado Pago não foi injetado.");
         }
 
-        const mp = new window.MercadoPago('TEST-e08f5487-779a-447d-9b0c-7a2b05578f6c', {
+        const mp = new window.MercadoPago('APP_USR-fc44fd7b-f168-49bd-a726-0caaa44f098d', {
             locale: 'pt-BR'
         });
 
