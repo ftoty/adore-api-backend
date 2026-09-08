@@ -857,7 +857,7 @@
             }
 
             if (supabaseAppClient) {
-                const { data: { session } > searchSession = await supabaseAppClient.auth.getSession();
+                const { data: { session } } = await supabaseAppClient.auth.getSession();
                 const sessionData = await supabaseAppClient.auth.getSession();
                 const activeSession = sessionData.data.session;
                 
