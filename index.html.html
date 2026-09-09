@@ -285,7 +285,6 @@
         .asset-mini-card img { width: 100%; height: 55px; object-fit: cover; border-radius: 4px; background: #222; }
         .asset-mini-card span { font-size: 10px; color: var(--text-muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
 
-        /* DIMENSÕES EXPLICITAS DO CONTAINER DO BRICK */
         #paymentBrick_container {
             width: 100%;
             min-height: 450px;
@@ -298,9 +297,19 @@
         }
         .krom-modal-card {
             background: var(--bg-card); border: 1px solid var(--border-color);
-            border-radius: 12px; width: 420px; padding: 24px;
-            display: flex; flex-direction: column; gap: 16px; color: var(--text-main);
+            border-radius: 12px; width: 400px; padding: 24px;
+            display: flex; flex-direction: column; gap: 14px; color: var(--text-main);
             box-shadow: 0 15px 35px rgba(0,0,0,0.9);
+        }
+        .auth-tab-bar {
+            display: flex; gap: 4px; background: var(--bg-base); padding: 4px; border-radius: 8px; border: 1px solid var(--border-color);
+        }
+        .auth-tab-btn {
+            flex: 1; background: transparent; border: none; color: var(--text-muted);
+            padding: 6px; font-size: 11px; font-weight: 600; border-radius: 6px; cursor: pointer;
+        }
+        .auth-tab-btn.active {
+            background: var(--bg-surface); color: var(--accent-green); border: 1px solid var(--border-color);
         }
         .hidden { display: none !important; }
     </style>
@@ -422,7 +431,6 @@
             supabaseAppClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
-        // Chave de Teste configurada para teste inicial do Brick
         const MP_PUBLIC_KEY = 'TEST-e08f5487-779a-447d-9b0c-7a2b05578f6c'; 
         let mpInstanceGlobal = null;
         let paymentBrickControllerGlobal = null;
@@ -693,10 +701,10 @@
                 <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
                     <div class="krom-modal-card" style="width: 480px; max-height: 90vh; overflow-y: auto;">
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-                            <h3 style="color: var(--accent-green); font-size: 16px;">Plano Mestre Adorê (R$ 49,00)</h3>
+                            <h3 style="color: var(--accent-green); font-size: 16px;">Ativação Inicial (R$ 1,00)</h3>
                             <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
                         </div>
-                        <p style="font-size: 12px; color: var(--text-muted);">Insira os dados de pagamento abaixo para desbloquear o estúdio completo:</p>
+                        <p style="font-size: 12px; color: var(--text-muted);">Insira os dados de pagamento (modo de teste) para gerar o ID de transação:</p>
                         
                         <div id="paymentBrick_container"></div>
                     </div>
@@ -725,7 +733,7 @@
 
                 const settings = {
                     initialization: {
-                        amount: 49.00,
+                        amount: 1.00, // Alterado para R$ 1,00 para teste
                     },
                     customization: {
                         paymentMethods: {
@@ -750,7 +758,7 @@
                                 const user = sessionRes?.data?.session?.user;
 
                                 if (!user) {
-                                    alert("Você precisa estar logado para concluir a assinatura!");
+                                    alert("Você precisa estar logado para concluir o teste de pagamento!");
                                     abrirModalAuth('login');
                                     reject();
                                     return;
@@ -760,19 +768,19 @@
                                     const { data: paymentResult, error } = await supabaseAppClient.functions.invoke('processar-pagamento', {
                                         body: { 
                                             formData, 
-                                            produtoTipo: 'mestre' 
+                                            produtoTipo: 'teste_1real' 
                                         }
                                     });
 
                                     if (error) throw error;
 
                                     if (paymentResult && paymentResult.status === "approved") {
-                                        alert(`🎉 Pagamento Aprovado! Bem-vindo ao Plano Mestre Adorê. ID: ${paymentResult.id}`);
+                                        alert(`🎉 Pagamento Aprovado com Sucesso! ID da Transação: ${paymentResult.id}`);
                                         resolve();
                                         fecharModalGlobal();
                                         window.location.reload();
                                     } else if (paymentResult && (paymentResult.status === "in_process" || paymentResult.status === "pending")) {
-                                        alert("⏳ Pagamento pendente ou em análise.");
+                                        alert(`⏳ Pagamento pendente. ID da Transação: ${paymentResult.id}`);
                                         resolve();
                                         fecharModalGlobal();
                                     } else {
@@ -781,7 +789,7 @@
                                     }
                                 } catch (err) {
                                     console.error("Erro no envio do pagamento:", err);
-                                    alert("Erro ao processar pagamento.");
+                                    alert("Erro ao processar pagamento de teste.");
                                     reject(err);
                                 }
                             });
@@ -801,24 +809,115 @@
             }
         }
 
-        function abrirModalAuth(tipo) {
+        function abrirModalAuth(modoInicial = 'login') {
             const container = document.getElementById('kromModalContainer');
-            container.innerHTML = `
-                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
-                    <div class="krom-modal-card" style="width: 380px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h3 style="color: var(--accent-green); font-size: 16px;">Acessar Oficina Adorê</h3>
-                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+            if (!container) return;
+
+            const renderizarConteudoAuth = (modo) => {
+                const card = document.getElementById('authCardContent');
+                if (!card) return;
+
+                if (modo === 'login') {
+                    card.innerHTML = `
+                        <div class="auth-tab-bar">
+                            <button class="auth-tab-btn active" onclick="trocarAbaAuth('login')">Entrar</button>
+                            <button class="auth-tab-btn" onclick="trocarAbaAuth('cadastro')">Criar Conta</button>
                         </div>
                         <button onclick="loginComGoogleReal()" style="background: #fff; color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Continuar com o Google</button>
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <input type="email" id="inputEmailReal" placeholder="E-mail" style="background: var(--bg-base); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;">
                             <input type="password" id="inputSenhaReal" placeholder="Senha" style="background: var(--bg-base); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;">
                             <button onclick="loginComEmailReal(document.getElementById('inputEmailReal').value, document.getElementById('inputSenhaReal').value)" style="background: var(--accent-green); color: #000; border: none; padding: 9px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Entrar</button>
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
+                                <span onclick="trocarAbaAuth('esqueci')" style="color: var(--accent-green); cursor: pointer; text-decoration: underline;">Esqueci a senha</span>
+                            </div>
                         </div>
+                    `;
+                } else if (modo === 'cadastro') {
+                    card.innerHTML = `
+                        <div class="auth-tab-bar">
+                            <button class="auth-tab-btn" onclick="trocarAbaAuth('login')">Entrar</button>
+                            <button class="auth-tab-btn active" onclick="trocarAbaAuth('cadastro')">Criar Conta</button>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-muted);">Cadastre-se e entre instantaneamente no estúdio:</p>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <input type="email" id="inputCadEmail" placeholder="Seu e-mail" style="background: var(--bg-base); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;">
+                            <input type="password" id="inputCadSenha" placeholder="Crie uma senha (mín. 6 caracteres)" style="background: var(--bg-base); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;">
+                            <button onclick="cadastrarEAutologin(document.getElementById('inputCadEmail').value, document.getElementById('inputCadSenha').value)" style="background: var(--accent-green); color: #000; border: none; padding: 9px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Cadastrar e Entrar</button>
+                        </div>
+                    `;
+                } else if (modo === 'esqueci') {
+                    card.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 6px;">
+                            <h3 style="color: var(--accent-green); font-size: 15px;">Recuperar Senha</h3>
+                            <span onclick="trocarAbaAuth('login')" style="color: var(--text-muted); font-size: 11px; cursor: pointer;">Voltar</span>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-muted);">Digite seu e-mail para receber o link de redefinição de senha:</p>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <input type="email" id="inputRecupEmail" placeholder="Seu e-mail cadastrado" style="background: var(--bg-base); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; font-size: 12px; outline: none;">
+                            <button onclick="enviarRecuperacaoSenha(document.getElementById('inputRecupEmail').value)" style="background: var(--accent-green); color: #000; border: none; padding: 9px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; width: 100%;">Enviar Instruções</button>
+                        </div>
+                    `;
+                }
+            };
+
+            window.trocarAbaAuth = (modo) => {
+                renderizarConteudoAuth(modo);
+            };
+
+            container.innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card" style="width: 380px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: var(--accent-green); font-size: 16px;">Oficina Adorê • Acesso</h3>
+                            <button onclick="fecharModalGlobal()" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; font-size:16px;">✕</button>
+                        </div>
+                        <div id="authCardContent" style="display: flex; flex-direction: column; gap: 12px;"></div>
                     </div>
                 </div>
             `;
+
+            renderizarConteudoAuth(modoInicial);
+        }
+
+        async function cadastrarEAutologin(email, senha) {
+            if (!supabaseAppClient) return alert("Supabase não inicializado.");
+            if (!email || !senha) return alert("Preencha todos os campos.");
+
+            const { data, error } = await supabaseAppClient.auth.signUp({ 
+                email, 
+                password: senha 
+            });
+
+            if (error) {
+                alert("Erro ao cadastrar: " + error.message);
+                return;
+            }
+
+            if (data.session) {
+                alert("🎉 Conta criada com sucesso! Você já está logado.");
+                fecharModalGlobal();
+                atualizarTopoUsuarioLogado(data.user);
+            } else {
+                alert("✅ Conta criada com sucesso! Verifique seu e-mail ou faça login.");
+                trocarAbaAuth('login');
+            }
+        }
+
+        async function enviarRecuperacaoSenha(email) {
+            if (!supabaseAppClient) return alert("Supabase não inicializado.");
+            if (!email) return alert("Digite seu e-mail.");
+
+            const { error } = await supabaseAppClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.href,
+            });
+
+            if (error) {
+                alert("Erro ao enviar recuperação: " + error.message);
+            } else {
+                alert("📧 E-mail de recuperação enviado! Verifique sua caixa de entrada.");
+                trocarAbaAuth('login');
+            }
         }
 
         function selecionarFerramenta(ferramenta, event) {
