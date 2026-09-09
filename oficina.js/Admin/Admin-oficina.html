@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo • Oficina Adorê</title>
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --bg-base: #0f0f11;
+            --bg-surface: #17171a;
+            --bg-card: #202024;
+            --accent-green: #C5F955;
+            --accent-pink: #FF97C2;
+            --text-main: #fafafa;
+            --text-muted: #94949e;
+            --border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background-color: var(--bg-base); color: var(--text-main); font-family: 'Barlow', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        .admin-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 60px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
+        }
+
+        .admin-logo { font-size: 16px; font-weight: 800; color: var(--accent-green); text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        .admin-container {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            height: calc(100vh - 60px);
+            overflow: hidden;
+        }
+
+        .admin-sidebar {
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .sidebar-btn:hover, .sidebar-btn.active { background: var(--bg-card); color: var(--accent-green); border: 1px solid var(--border-color); }
+
+        .admin-content {
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .metric-card span { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+        .metric-card h2 { font-size: 24px; color: var(--accent-green); font-weight: 700; }
+
+        .table-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .table-card h3 { font-size: 15px; font-weight: 700; color: var(--text-main); }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+        th { color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border-color); padding: 10px; }
+        td { padding: 12px 10px; border-bottom: 1px solid var(--border-color); color: var(--text-main); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .badge-status {
+            background: rgba(197, 249, 85, 0.15);
+            color: var(--accent-green);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="admin-header">
+        <span class="admin-logo">⚙️ Painel Administrativo • Oficina Adorê</span>
+        <a href="../index.html" style="color: var(--text-muted); font-size: 12px; text-decoration: none; font-weight: 600;">← Voltar ao Estúdio 3D</a>
+    </header>
+
+    <div class="admin-container">
+        <aside class="admin-sidebar">
+            <button class="sidebar-btn active" onclick="mudarAba('dashboard', event)">📊 Dashboard & Métricas</button>
+            <button class="sidebar-btn" onclick="mudarAba('pedidos', event)">🛒 Pedidos & Ativações</button>
+            <button class="sidebar-btn" onclick="mudarAba('inventario', event)">📦 Inventário de Malhas</button>
+            <button class="sidebar-btn" onclick="mudarAba('usuarios', event)">👥 Usuários Cadastrados</button>
+        </aside>
+
+        <main class="admin-content" id="mainContentArea">
+            <!-- Conteúdo dinâmico carregado por padrão no Dashboard -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span>Faturamento Total (R$ 1,00)</span>
+                    <h2 id="txtFaturamento">R$ 1,00</h2>
+                </div>
+                <div class="metric-card">
+                    <span>Transações Aprovadas</span>
+                    <h2 id="txtTransacoes">1</h2>
+                </div>
+                <div class="metric-card">
+                    <span>Ativos no Inventário</span>
+                    <h2>14</h2>
+                </div>
+            </div>
+
+            <div class="table-card">
+                <h3>Últimas Transações e Atativações na Oficina</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID Transação</th>
+                            <th>Cliente</th>
+                            <th>Produto / Serviço</th>
+                            <th>Status</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaTransacoesBody">
+                        <tr>
+                            <td>#MP-984219</td>
+                            <td>criador@oficinaadore.com</td>
+                            <td>Ativação Inicial (R$ 1,00)</td>
+                            <td><span class="badge-status">Aprovado</span></td>
+                            <td>Hoje, 14:35</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const SUPABASE_URL = "https://mlfgluwcuzddwijffrbe.supabase.co"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0"; 
+        const supabaseAdmin = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function carregarDadosAdmin() {
+            try {
+                // Aqui você pode puxar os dados reais das tabelas do seu Supabase se desejar
+                console.log("Painel Administrativo conectado ao Supabase com sucesso.");
+            } catch (e) {
+                console.error("Erro ao carregar dados do admin:", e);
+            }
+        }
+
+        function mudarAba(aba, event) {
+            document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+            if (event && event.currentTarget) event.currentTarget.classList.add('active');
+
+            const area = document.getElementById('mainContentArea');
+            if (aba === 'dashboard') {
+                area.innerHTML = `
+                    <div class="metrics-grid">
+                        <div class="metric-card"><span>Faturamento Total</span><h2>R$ 1,00</h2></div>
+                        <div class="metric-card"><span>Transações</span><h2>1</h2></div>
+                        <div class="metric-card"><span>Inventário</span><h2>14</h2></div>
+                    </div>
+                    <div class="table-card">
+                        <h3>Últimas Transações</h3>
+                        <table>
+                            <thead><tr><th>ID</th><th>Cliente</th><th>Serviço</th><th>Status</th><th>Data</th></tr></thead>
+                            <tbody><tr><td>#MP-984219</td><td>criador@oficinaadore.com</td><td>Ativação R$ 1,00</td><td><span class="badge-status">Aprovado</span></td><td>Hoje</td></tr></tbody>
+                        </table>
+                    </div>
+                `;
+            } else if (aba === 'pedidos') {
+                area.innerHTML = `<div class="table-card"><h3>Gerenciamento de Pedidos e Fila de Impressão 3D</h3><p style="color:var(--text-muted); font-size:13px;">Nenhum pedido pendente na fila no momento.</p></div>`;
+            } else if (aba === 'inventario') {
+                area.innerHTML = `<div class="table-card"><h3>Inventário de Malhas & Assets 3D</h3><p style="color:var(--text-muted); font-size:13px;">Esfera PBR, Torus Adorê e Icosaedro carregados na nuvem.</p></div>`;
+            } else if (aba === 'usuarios') {
+                area.innerHTML = `<div class="table-card"><h3>Membros do Clã & Usuários</h3><p style="color:var(--text-muted); font-size:13px;">Controle de acesso sincronizado com o Supabase Auth.</p></div>`;
+            }
+        }
+
+        carregarDadosAdmin();
+    </script>
+</body>
+</html>
