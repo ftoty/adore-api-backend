@@ -713,6 +713,11 @@
             containerBrick.innerHTML = '<div style="text-align:center; padding: 20px; font-size:12px; color:var(--text-muted);">Carregando painel de pagamento seguro...</div>';
 
             try {
+                if (paymentBrickControllerGlobal) {
+                    await paymentBrickControllerGlobal.unmount();
+                    paymentBrickControllerGlobal = null;
+                }
+
                 await aguardarLayout();
 
                 const mp = getMercadoPagoInstance();
@@ -729,6 +734,11 @@
                             bankTransfer: "all",
                             atm: "all",
                         },
+                        visual: {
+                            style: {
+                                theme: "dark"
+                            }
+                        }
                     },
                     callbacks: {
                         onReady: () => {
@@ -736,7 +746,9 @@
                         },
                         onSubmit: ({ selectedPaymentMethod, formData }) => {
                             return new Promise(async (resolve, reject) => {
-                                const { data: { user } } = await supabaseAppClient.auth.getUser();
+                                const sessionRes = await supabaseAppClient.auth.getSession();
+                                const user = sessionRes?.data?.session?.user;
+
                                 if (!user) {
                                     alert("Você precisa estar logado para concluir a assinatura!");
                                     abrirModalAuth('login');
@@ -754,17 +766,17 @@
 
                                     if (error) throw error;
 
-                                    if (paymentResult.status === "approved") {
+                                    if (paymentResult && paymentResult.status === "approved") {
                                         alert(`🎉 Pagamento Aprovado! Bem-vindo ao Plano Mestre Adorê. ID: ${paymentResult.id}`);
                                         resolve();
                                         fecharModalGlobal();
                                         window.location.reload();
-                                    } else if (paymentResult.status === "in_process" || paymentResult.status === "pending") {
+                                    } else if (paymentResult && (paymentResult.status === "in_process" || paymentResult.status === "pending")) {
                                         alert("⏳ Pagamento pendente ou em análise.");
                                         resolve();
                                         fecharModalGlobal();
                                     } else {
-                                        alert(`❌ O pagamento não pôde ser processado. Motivo: ${paymentResult.status_detail || 'Erro'}`);
+                                        alert(`❌ O pagamento não pôde ser processado. Motivo: ${paymentResult?.status_detail || 'Erro'}`);
                                         reject();
                                     }
                                 } catch (err) {
