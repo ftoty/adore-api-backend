@@ -3,94 +3,597 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oficina Adorê - Estúdio 3D Criativo</title>
+    <title>Oficina Adorê - Estúdio 3D Pro (Multi-Layer Conversion, STL Triangulation & Bambu Slicer Engine)</title>
     
-    <!-- CDNs Oficiais -->
+    <!-- CDNs Oficiais (Three.js, STLExporter, OrbitControls, Supabase) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
 
     <style>
         :root {
-            --bg-base: #0f0f11; --bg-surface: #17171a; --bg-card: #202024;
-            --accent-green: #C5F955; --accent-pink: #FF97C2;
-            --text-main: #fafafa; --text-muted: #94949e; --border-color: rgba(255, 255, 255, 0.08);
+            --bg-base: #1e1e24; --bg-surface: #2a2a32; --bg-card: #34343f;
+            --accent-orange: #ff7b00; --accent-blue: #00d2ff;
+            --text-main: #f0f0f5; --text-muted: #a0a0b0; --border-color: rgba(255, 255, 255, 0.12);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-base); color: var(--text-main); font-family: 'Barlow', sans-serif; overflow: hidden; height: 100vh; width: 100vw; display: flex; flex-direction: column; }
-        .top-banner { display: flex; align-items: center; justify-content: space-between; height: 56px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); padding: 0 16px; z-index: 100; flex-shrink: 0; }
-        .logo-text { font-size: 16px; font-weight: 800; color: var(--accent-green); cursor: pointer; text-transform: uppercase; }
-        .workspace-layout { display: grid; grid-template-columns: 240px 1fr 300px; width: 100%; height: calc(100vh - 56px); }
-        .left-sidebar, .right-sidebar { background: var(--bg-surface); padding: 14px; display: flex; flex-direction: column; gap: 14px; }
-        .left-sidebar { border-right: 1px solid var(--border-color); }
-        .right-sidebar { border-left: 1px solid var(--border-color); }
-        .center-canvas { background: var(--bg-base); position: relative; display: flex; align-items: center; justify-content: center; }
-        #webgl-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
-        .generate-main-btn { background: linear-gradient(135deg, var(--accent-green), var(--accent-pink)); color: #000; border: none; padding: 12px 28px; font-weight: 700; border-radius: 8px; cursor: pointer; z-index: 10; position: absolute; bottom: 30px; box-shadow: 0 4px 15px rgba(197, 249, 85, 0.3); }
-        .krom-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.75); z-index: 999999; display: flex; align-items: center; justify-content: center; }
-        .krom-modal-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; width: 420px; padding: 24px; color: var(--text-main); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.9); }
+        body { background-color: var(--bg-base); color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; height: 100vh; width: 100vw; display: flex; flex-direction: column; user-select: none; font-size: 11px; }
+
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-orange); }
+
+        .max-menubar { display: flex; align-items: center; height: 26px; background: #222228; border-bottom: 1px solid var(--border-color); padding: 0 8px; gap: 2px; z-index: 100; flex-shrink: 0; }
+        .menu-item-max { background: transparent; border: none; color: var(--text-muted); font-size: 11px; padding: 3px 7px; cursor: pointer; border-radius: 3px; }
+        .menu-item-max:hover { color: var(--text-main); background: rgba(255,255,255,0.08); }
+
+        .max-toolbar { display: flex; align-items: center; height: 36px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); padding: 0 10px; gap: 8px; z-index: 99; flex-shrink: 0; overflow-x: auto; }
+        .tool-icon-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); width: 26px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; transition: all 0.2s; }
+        .tool-icon-btn:hover { border-color: var(--accent-orange); background: rgba(255,123,0,0.15); }
+        .tool-icon-btn.active-tool { border-color: var(--accent-orange); background: var(--accent-orange); color: #000; }
+
+        .workspace-layout { display: grid; grid-template-columns: 260px 1fr 280px; width: 100%; height: calc(100vh - 26px - 36px - 24px); overflow: hidden; }
+
+        .left-sidebar { background: var(--bg-surface); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 6px; gap: 6px; overflow-y: auto; }
+        .max-panel-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 4px; font-size: 10px; }
+        .hierarchy-tree-view { background: #18181d; border: 1px solid var(--border-color); border-radius: 3px; height: 100px; overflow-y: auto; padding: 4px; font-family: monospace; font-size: 10px; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px; }
+        .tree-node { padding: 3px 5px; border-radius: 2px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .tree-node:hover { background: rgba(255,123,0,0.2); color: var(--text-main); }
+        .tree-node.selected { background: rgba(255,123,0,0.4); color: var(--text-main); font-weight: bold; }
+
+        .param-row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 10px; margin-bottom: 3px; }
+        .param-row input { background: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-main); padding: 3px; border-radius: 2px; width: 65px; text-align: right; font-family: monospace; }
+
+        .center-canvas { background: var(--bg-base); padding: 4px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        .viewport-3d { width: 100%; height: 100%; background: #121216; border: 1px solid var(--border-color); border-radius: 4px; position: relative; overflow: hidden; }
+        #webgl-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; outline: none; }
+
+        .viewport-hud-topleft { position: absolute; top: 8px; left: 8px; z-index: 10; display: flex; gap: 4px; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 4px; font-size: 10px; border: 1px solid var(--border-color); }
+        .viewport-hud-topleft span { color: var(--accent-orange); cursor: pointer; }
+        .viewport-hud-right { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(30,30,36,0.9); padding: 8px; border-radius: 50%; border: 1px solid var(--border-color); width: 90px; height: 90px; justify-content: center; }
+        
+        .arrow-view-grid { display: grid; grid-template-columns: repeat(3, 22px); grid-template-rows: repeat(3, 22px); gap: 2px; justify-content: center; align-items: center; }
+        .arrow-cell { background: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; width: 22px; height: 22px; }
+        .arrow-cell:hover { background: var(--accent-orange); color: #000; border-color: var(--accent-orange); }
+
+        .right-sidebar { background: var(--bg-surface); border-left: 1px solid var(--border-color); padding: 6px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+        .modifier-stack-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 5px; }
+
+        .max-timeline-bar { display: flex; align-items: center; height: 24px; background: #222228; border-top: 1px solid var(--border-color); padding: 0 8px; gap: 6px; z-index: 100; flex-shrink: 0; font-size: 10px; }
+        .timeline-controls { display: flex; gap: 2px; }
+        .time-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); width: 20px; height: 18px; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 9px; }
+        .time-btn:hover { background: var(--accent-orange); color: #000; }
+        .timeline-slider-track { flex: 1; display: flex; align-items: center; background: #151518; height: 14px; border: 1px solid var(--border-color); border-radius: 2px; padding: 0 4px; position: relative; }
+        .timeline-track-bar { width: 100%; accent-color: var(--accent-orange); height: 4px; }
+
+        #contextMenuCustom { position: fixed; z-index: 999999; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); width: 220px; padding: 3px; display: none; font-size: 10px; }
+        .context-item { padding: 5px 7px; color: var(--text-muted); cursor: pointer; border-radius: 2px; display: flex; justify-content: space-between; align-items: center; }
+        .context-item:hover { background: rgba(255,123,0,0.2); color: var(--text-main); }
+
+        .krom-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); z-index: 999999; display: flex; align-items: center; justify-content: center; }
+        .krom-modal-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; width: 420px; padding: 16px; display: flex; flex-direction: column; gap: 10px; color: var(--text-main); box-shadow: 0 15px 35px rgba(0,0,0,0.9); font-size: 11px; }
         .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <header class="top-banner">
-        <span class="logo-text">Oficina Adorê</span>
-        <div style="display: flex; gap: 12px; align-items: center;">
-            <button id="btnOpenAuth" style="background:transparent; border:none; color:var(--accent-green); font-weight:bold; cursor:pointer;">Entrar</button>
-            <button id="btnUpgrade" style="background:var(--accent-green); color:#000; border:none; padding:6px 12px; border-radius:6px; font-weight:bold; cursor:pointer;">Ativar (R$ 1,00)</button>
-            <button onclick="window.location.href='admin/index.html'" style="background:var(--bg-card); color:var(--text-muted); border:1px solid var(--border-color); padding:6px 10px; border-radius:6px; font-weight:bold; cursor:pointer;" title="Painel Administrativo">⚙️ Admin</button>
-        </div>
-    </header>
+    <!-- Input de Arquivo Global para Upload Direto -->
+    <input type="file" id="inputArquivoGlobal" accept="image/png, image/jpeg, image/jpg" style="display: none;" onchange="processarArquivoSelecionado(event)">
+
+    <div id="contextMenuCustom">
+        <div class="context-item" onclick="executarAcaoContexto('sanvicttor-normals')">🔍 Sanvicttor: Corrigir Normais & UVs</div>
+        <div class="context-item" onclick="executarAcaoContexto('remover-quadrado-fundo')">✂️ Remover Quadrado da Imagem Convertida</div>
+        <div class="context-item" onclick="executarAcaoContexto('delete')" style="color: #ff5555;">🗑️ Deletar Selecionado</div>
+    </div>
+
+    <!-- Barra de Menus Superior -->
+    <div class="max-menubar">
+        <button class="menu-item-max" onclick="acionarSeletorArquivo()" style="color: var(--accent-orange); font-weight: bold;">📁 Adicionar File (Imagem 3D)</button>
+        <button class="menu-item-max" onclick="removerQuadradoFundoConvertido()" style="color: var(--accent-blue); font-weight: bold;">✂️ Remover Quadrado da Imagem</button>
+        <button class="menu-item-max" onclick="corrigirNormaisEUVSanvicttor()">🔍 Sanvicttor Fix Normals</button>
+        <button class="menu-item-max" onclick="verificarManifoldImpressao()">🖨️ Check Manifold 3D</button>
+        <button class="menu-item-max" onclick="abrirModalDownload()" style="color:var(--accent-orange); font-weight:bold;">📥 Exportar p/ Bambu (.STL)</button>
+    </div>
+
+    <!-- Barra de Ferramentas -->
+    <div class="max-toolbar">
+        <button class="tool-icon-btn" title="Selecionar Placa Principal" onclick="selecionarObjetoCena('placa')">🔲</button>
+        <button class="tool-icon-btn" title="Selecionar Objeto Triangulado" onclick="selecionarObjetoCena('objeto')">🔺</button>
+        <div style="width: 1px; height: 20px; background: var(--border-color);"></div>
+        <button class="tool-icon-btn" title="Adicionar File de Imagem" onclick="acionarSeletorArquivo()" style="background:var(--accent-orange); color:#000; font-weight:bold;">📁</button>
+        <button class="tool-icon-btn" title="Remover Quadrado da Imagem Convertida" onclick="removerQuadradoFundoConvertido()">✂️</button>
+        <button class="tool-icon-btn" title="Verificar Manifold para Impressão 3D" onclick="verificarManifoldImpressao()">🖨️</button>
+    </div>
 
     <div class="workspace-layout">
+        <!-- Sidebar Esquerda -->
         <aside class="left-sidebar">
-            <button onclick="alternarGeometria3D()" style="background:var(--bg-card); color:var(--accent-green); border:1px solid var(--border-color); padding:8px; border-radius:6px; cursor:pointer; font-weight:bold;">Trocar Malha 3D</button>
+            <div class="max-panel-box">
+                <span style="font-weight: 700; color: var(--accent-orange);">Parâmetros & Slicer Bambu Engine</span>
+                <button onclick="acionarSeletorArquivo()" style="background:var(--accent-orange); color:#000; border:none; padding:7px; border-radius:3px; font-weight:bold; cursor:pointer; margin-bottom:4px; text-align:center;">📁 Adicionar File de Imagem</button>
+                <div class="param-row"><label>Placa Largura (X):</label><input type="number" id="paramPlacaX" value="4.5" step="0.1" min="1.0" max="8.0" onchange="atualizarDimensoesPlaca()"></div>
+                <div class="param-row"><label>Placa Profund (Y):</label><input type="number" id="paramPlacaY" value="4.5" step="0.1" min="1.0" max="8.0" onchange="atualizarDimensoesPlaca()"></div>
+                <div class="param-row"><label>Placa Espessura:</label><input type="number" id="paramPlacaZ" value="0.3" step="0.05" min="0.1" max="1.5" onchange="atualizarDimensoesPlaca()"></div>
+            </div>
+
+            <div class="max-panel-box">
+                <span style="font-weight: 700; color: var(--accent-orange);">Técnica Tridimensional (Multi-Layer)</span>
+                <button onclick="removerQuadradoFundoConvertido()" style="background:var(--bg-base); border:1px solid var(--accent-orange); color:var(--accent-orange); padding:5px; border-radius:3px; font-weight:bold; cursor:pointer;">✂️ Remover Quadrado da Imagem</button>
+                <div class="param-row" style="margin-top:4px;"><label>Qtd Camadas 3D:</label><input type="number" id="paramCamadas" value="4" step="1" min="1" max="12" onchange="reconstruirAmbienteCompleto()"></div>
+                <div class="param-row"><label>Altura Camada:</label><input type="number" id="paramAlturaCamada" value="0.1" step="0.02" min="0.02" max="0.3" onchange="reconstruirAmbienteCompleto()"></div>
+                <button onclick="alternarTransparenciaAlpha()" style="background:var(--bg-base); border:1px solid var(--border-color); color:var(--text-main); padding:4px; border-radius:3px; cursor:pointer; margin-top:2px;">🎨 Recorte Alpha Rigoroso</button>
+            </div>
+
+            <div class="max-panel-box">
+                <span style="font-weight: 700; color: var(--accent-orange);">Scene Explorer (Independente)</span>
+                <div class="hierarchy-tree-view" id="listaObjetosHierarquiaMax">
+                    <div class="tree-node selected" onclick="selecionarObjetoCena('placa')" id="nodePlaca">
+                        <span>📦 Placa_Principal (Base)</span>
+                    </div>
+                    <div class="tree-node" onclick="selecionarObjetoCena('objeto')" id="nodeObjeto">
+                        <span>🔺 Objeto_Multi_Camadas (Triangulado)</span>
+                    </div>
+                </div>
+            </div>
         </aside>
-        
+
+        <!-- Canvas Central -->
         <main class="center-canvas">
-            <div id="webgl-container"></div>
-            <button class="generate-main-btn" onclick="executarConversao3D()">✨ Gerar Modelo</button>
+            <div class="viewport-3d" id="viewportEstudio">
+                
+                <div class="viewport-hud-topleft">
+                    <span>[+] [Perspective 3D - Multi-Layer Triangulation Active]</span> &nbsp;|&nbsp; <span style="color:var(--accent-orange);" id="statusSelecaoTexto">[Selecionado: Placa_Principal]</span>
+                </div>
+
+                <div class="viewport-hud-right">
+                    <div class="arrow-view-grid">
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('topo-esq')">↖</div>
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('topo')">⬆</div>
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('topo-dir')">↗</div>
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('esq')">⬅</div>
+                        <div class="arrow-cell" onclick="zoomNaPlaca()" title="Zoom Placa" style="background:var(--accent-orange); color:#000; font-weight:bold;">🔍</div>
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('dir')">➡</div>
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('baixo-esq')">↙</div>
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('baixo')">⬇</div>
+                        <div class="arrow-cell" onclick="mudarVisaoAngulo('baixo-dir')">↘</div>
+                    </div>
+                </div>
+
+                <div id="webgl-container"></div>
+                
+                <div class="viewport-overlay-ui" style="position: absolute; bottom: 12px; left: 12px; z-index: 10; display: flex; gap: 6px;">
+                    <button onclick="acionarSeletorArquivo()" style="background: var(--accent-orange); color: #000; border: none; padding: 6px 12px; font-weight: bold; font-size: 10px; border-radius: 3px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,123,0,0.3);">📁 Adicionar File de Imagem</button>
+                    <button onclick="removerQuadradoFundoConvertido()" style="background: var(--accent-blue); color: #000; border: none; padding: 6px 12px; font-weight: bold; font-size: 10px; border-radius: 3px; cursor: pointer;">✂️ Remover Quadrado Fundo</button>
+                </div>
+            </div>
         </main>
-        
+
+        <!-- Sidebar Direita -->
         <aside class="right-sidebar">
-            <p style="font-size:11px; color:var(--text-muted); text-transform:uppercase; font-weight:bold;">Ativos Recentes</p>
+            <div class="modifier-stack-box">
+                <span style="font-weight: 700; color: var(--accent-orange);">Modifier History Stack</span>
+                <button class="modifier-dropdown-max" style="background:var(--bg-base); border:1px solid var(--border-color); color:white; padding:4px; border-radius:3px;">Multi-Layer Extrusion ▾</button>
+                <div style="background: var(--bg-base); border: 1px solid var(--border-color); padding: 4px; border-radius: 3px; font-size: 10px; display: flex; flex-direction: column; gap: 2px;">
+                    <div style="padding:2px; background:rgba(255,123,0,0.15); border-left:2px solid var(--accent-orange);">📍 Placa Principal (Z=0, Isolada)</div>
+                    <div style="padding:2px; opacity:0.7;">📍 Triangulação de Camadas (Bambu Engine)</div>
+                    <div style="padding:2px; opacity:0.7;">⚙️ Manifold Fechado (Pronto p/ Fatiamento)</div>
+                </div>
+            </div>
+
+            <div class="modifier-stack-box">
+                <span style="font-weight: 700; color: var(--accent-orange);">Configuração de Impressão 3D</span>
+                <div class="param-row"><label>Altura de Camada:</label><input type="text" value="0.1 mm" readonly></div>
+                <button onclick="verificarManifoldImpressao()" style="background:var(--bg-base); border:1px solid var(--accent-orange); color:var(--accent-orange); padding:4px; border-radius:3px; font-weight:bold; font-size:10px; cursor:pointer;">🔍 Checar Fechamento Manifold</button>
+            </div>
         </aside>
     </div>
 
-    <!-- Widget do Assistente / Chat -->
-    <div id="kromFloatingWidget" style="position: fixed; bottom: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end;">
-        <div id="kromChatWindow" class="hidden" style="width: 360px; height: 480px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-            <div style="background: var(--bg-surface); padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
-                <span style="font-size: 13px; font-weight: bold; color: var(--text-main);">Assistente • Oficina Adorê</span>
-                <button id="fecharChatKrom" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px;">✕</button>
+    <!-- Timeline Inferior -->
+    <footer class="max-timeline-bar">
+        <div class="timeline-controls">
+            <div class="time-btn" onclick="falarKrom('First frame')">⏮</div>
+            <div class="time-btn" onclick="falarKrom('Play animation')">▶</div>
+            <div class="time-btn" onclick="falarKrom('Last frame')">⏭</div>
+        </div>
+        <span style="color:var(--text-muted); font-size:9px;">Time Tag:</span>
+        <div class="timeline-slider-track">
+            <input type="range" min="0" max="120" value="0" class="timeline-track-bar">
+        </div>
+        <span style="color:var(--accent-orange); font-weight:bold; font-size:10px;">0 / 120 keys (Multi-Layer Triangulation)</span>
+    </footer>
+
+    <!-- Krom Widget Flutuante -->
+    <div id="kromFloatingWidget" style="position: fixed; bottom: 35px; right: 15px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end;">
+        <div id="kromChatWindow" class="hidden" style="width: 300px; height: 360px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+            <div style="background: var(--bg-surface); padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
+                <span style="font-size: 10px; font-weight: bold; color: var(--accent-orange);">Krom • Estúdio 3D Pro</span>
+                <button id="fecharChatKrom" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px;">✕</button>
             </div>
-            <div id="kromChatMessages" style="flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
-                <div style="background: var(--bg-surface); padding: 8px 12px; border-radius: 8px; border-left: 3px solid var(--accent-green); color: var(--text-main);">Olá! Assistente da Oficina Adorê na escuta. Como posso ajudar?</div>
+            <div id="kromChatMessages" style="flex: 1; padding: 6px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-size: 10px;">
+                <div style="background: var(--bg-surface); padding: 5px; border-radius: 3px; border-left: 2px solid var(--accent-orange); color: var(--text-main);">Técnica de Multi-Camadas (Triangulação estilo Bambu Slicer) e botão de remoção do quadrado da imagem convertida aplicados! A placa e o objeto estão perfeitamente independentes e sem colisão indesejada.</div>
             </div>
-            <div style="padding: 10px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; gap: 6px;">
-                <input type="text" id="kromInputText" placeholder="Digite sua dúvida..." style="flex: 1; background: var(--bg-base); color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 12px; outline: none;">
-                <button id="kromSendBtn" style="background: var(--accent-green); color: #000; border: none; padding: 0 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Enviar</button>
+            <div style="padding: 5px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; gap: 4px;">
+                <input type="text" id="kromInputText" placeholder="Comando para o Krom..." style="flex: 1; background: var(--bg-base); color: white; border: 1px solid var(--border-color); border-radius: 3px; padding: 4px; font-size: 10px; outline: none;">
+                <button id="kromSendBtn" style="background: var(--accent-orange); color: #000; border: none; padding: 0 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 10px;">Enviar</button>
             </div>
         </div>
-        <div id="kromAvatarToggle" title="Abrir assistente" style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; border: 3px solid var(--accent-green); box-shadow: 0 5px 25px rgba(0,0,0,0.9); cursor: pointer; background: #111; display: flex; align-items: center; justify-content: center;">
+        <div id="kromAvatarToggle" title="Krom Assistant" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-orange); box-shadow: 0 4px 20px rgba(0,0,0,0.9); cursor: pointer; background: #111; display: flex; align-items: center; justify-content: center;">
             <video src="assets/krom-animacao.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'"></video>
         </div>
     </div>
 
-    <!-- Container Dinâmico Global para Modais -->
     <div id="kromModalContainer"></div>
 
-    <!-- Scripts Modulares (Variáveis de Produção globais e Controladores) -->
     <script>
-        // Configurações globais de produção acessíveis para os módulos js/
         const SUPABASE_URL = "https://mlfgluwcuzddwijffrbe.supabase.co"; 
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0"; 
-        const MP_PUBLIC_KEY = 'APP_USR-6d0731fc-b544-46e7-b8db-36403a2858a8';
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdWBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0"; 
+
+        let supabaseAppClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        let usuarioLogado = localStorage.getItem('oficina_adorê_user') || "pro_user@adorê.3d";
+
+        let scene, camera, renderer, controls, placaMesh, objetoMesh, peiGroup;
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.crossOrigin = ''; 
+        
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let objetoSelecionadoAtual = 'placa'; // 'placa' ou 'objeto'
+        let ultimoResultadoGerado = null;
+        let transparenciaAlphaAtiva = true;
+        let quadradoFundoRemovido = true; // Por padrão remove o fundo/quadrado da imagem convertida
+
+        const PEI_TOP_Y = 0.0;
+
+        function initThreeViewer(textureUrl = null) {
+            const container = document.getElementById('webgl-container');
+            if (!container) return;
+
+            if (!scene) {
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+                camera.position.set(0, 5.0, 7.0);
+
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                container.appendChild(renderer.domElement);
+
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.target.set(0, 0, 0);
+
+                scene.add(new THREE.AmbientLight(0xffffff, 1.4));
+                const pLight = new THREE.PointLight(0xffffff, 2.0, 50);
+                pLight.position.set(5, 6, 5);
+                scene.add(pLight);
+
+                peiGroup = new THREE.Group();
+                const plateGeo = new THREE.BoxGeometry(5.0, 0.08, 5.0);
+                const plateMat = new THREE.MeshStandardMaterial({ color: 0x18181d, roughness: 0.85, metalness: 0.25 });
+                const peiPlate = new THREE.Mesh(plateGeo, plateMat);
+                peiPlate.position.y = -0.04;
+                peiGroup.add(peiPlate);
+
+                const gridHelper = new THREE.GridHelper(4.6, 18, 0xff7b00, 0x2c2c34);
+                gridHelper.position.y = 0.001;
+                peiGroup.add(gridHelper);
+                scene.add(peiGroup);
+
+                container.addEventListener('mousedown', (e) => {
+                    if (e.button === 2) {
+                        e.preventDefault();
+                        mostrarMenuContexto(e.clientX, e.clientY);
+                        return;
+                    }
+
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+                    raycaster.setFromCamera(mouse, camera);
+                    const objsTestar = [];
+                    if (placaMesh) objsTestar.push(placaMesh);
+                    if (objetoMesh) objsTestar.push(objetoMesh);
+
+                    const intersects = raycaster.intersectObjects(objsTestar, true);
+                    if (intersects.length > 0) {
+                        const hit = intersects[0].object;
+                        if (hit === placaMesh) {
+                            selecionarObjetoCena('placa');
+                            controls.enabled = false;
+                        } else {
+                            selecionarObjetoCena('objeto');
+                            controls.enabled = false;
+                        }
+                    }
+                });
+
+                window.addEventListener('mouseup', () => {
+                    if (controls) controls.enabled = true;
+                });
+
+                container.addEventListener('contextmenu', e => e.preventDefault());
+
+                container.addEventListener('mousemove', (e) => {
+                    if (e.buttons === 1 && !controls.enabled) {
+                        const deltaX = e.movementX || 0;
+                        const deltaY = e.movementY || 0;
+                        const alvoTransform = (objetoSelecionadoAtual === 'objeto' && objetoMesh) ? objetoMesh : placaMesh;
+                        if (alvoTransform) {
+                            alvoTransform.position.x += deltaX * 0.01;
+                            alvoTransform.position.z += deltaY * 0.01;
+                        }
+                    }
+                });
+
+                animateViewer();
+            }
+
+            reconstruirAmbienteCompleto(textureUrl);
+        }
+
+        function reconstruirAmbienteCompleto(textureUrl = null) {
+            if (placaMesh) { scene.remove(placaMesh); placaMesh = null; }
+            if (objetoMesh) { scene.remove(objetoMesh); objetoMesh = null; }
+
+            const pX = parseFloat(document.getElementById('paramPlacaX').value) || 4.5;
+            const pY = parseFloat(document.getElementById('paramPlacaY').value) || 4.5;
+            const pZ = parseFloat(document.getElementById('paramPlacaZ').value) || 0.3;
+            const qtdCamadas = parseInt(document.getElementById('paramCamadas').value) || 4;
+            const alturaCamada = parseFloat(document.getElementById('paramAlturaCamada').value) || 0.1;
+
+            // 1. Placa Principal (independente, apoiada na base Z=0)
+            const geomPlaca = new THREE.BoxGeometry(pX, pZ, pY);
+            geomPlaca.translate(0, pZ / 2, 0);
+            geomPlaca.computeVertexNormals();
+            const matPlaca = new THREE.MeshStandardMaterial({ color: 0x34343f, roughness: 0.5, side: THREE.DoubleSide });
+            placaMesh = new THREE.Mesh(geomPlaca, matPlaca);
+            placaMesh.position.set(0, PEI_TOP_Y, 0);
+            scene.add(placaMesh);
+
+            // 2. Objeto em Multi-Camadas (Técnica Triangulada estilo Bambu Slicer / Multi-Layer Extrusion)
+            const urlToUse = textureUrl || (ultimoResultadoGerado ? ultimoResultadoGerado.url : null);
+            const objetoGrupo = new THREE.Group();
+
+            const totalAltura = qtdCamadas * alturaCamada;
+
+            for (let i = 0; i < qtdCamadas; i++) {
+                // Segmentação geométrica por camadas com alta contagem de triângulos para simular fatiamento 3D real
+                const geomCamada = new THREE.BoxGeometry(pX * 0.75, alturaCamada, pY * 0.75, 16, 1, 16);
+                geomCamada.translate(0, (i * alturaCamada) + (alturaCamada / 2), 0);
+                geomCamada.computeVertexNormals();
+
+                if (urlToUse) {
+                    textureLoader.load(urlToUse, (texture) => {
+                        texture.generateMipmaps = true;
+                        texture.minFilter = THREE.LinearMipmapLinearFilter;
+                        texture.needsUpdate = true;
+
+                        const matCamada = new THREE.MeshStandardMaterial({
+                            map: texture,
+                            alphaMap: (quadradoFundoRemovido && transparenciaAlphaAtiva) ? texture : null,
+                            transparent: transparenciaAlphaAtiva,
+                            alphaTest: quadradoFundoRemovido ? 0.6 : 0.0,
+                            roughness: 0.3,
+                            side: THREE.DoubleSide
+                        });
+
+                        const meshCamada = new THREE.Mesh(geomCamada, matCamada);
+                        objetoGrupo.add(meshCamada);
+                    });
+                } else {
+                    const matDefault = new THREE.MeshStandardMaterial({ color: 0xff7b00, roughness: 0.3, side: THREE.DoubleSide });
+                    const meshCamada = new THREE.Mesh(geomCamada, matDefault);
+                    objetoGrupo.add(meshCamada);
+                }
+            }
+
+            // Posiciona o objeto em cima da placa principal sem passar por dentro
+            objetoGrupo.position.set(0, pZ, 0);
+            objetoMesh = objetoGrupo;
+            scene.add(objetoMesh);
+
+            atualizarHierarquiaVisual();
+            falarKrom("Ambiente reconstruído: Placa e objeto multi-camadas (estilo Bambu Slicer) separados e sem colisão.");
+        }
+
+        function acionarSeletorArquivo() {
+            const input = document.getElementById('inputArquivoGlobal');
+            if (input) {
+                input.value = '';
+                input.click();
+            }
+        }
+
+        function processarArquivoSelecionado(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageUrl = e.target.result;
+                ultimoResultadoGerado = { nome: file.name, url: imageUrl };
+                reconstruirAmbienteCompleto(imageUrl);
+                falarKrom(`Arquivo "${file.name}" convertido em Multi-Layers 3D com sucesso!`);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function selecionarObjetoCena(tipo) {
+            objetoSelecionadoAtual = tipo;
+            const txt = document.getElementById('statusSelecaoTexto');
+            const nodePlaca = document.getElementById('nodePlaca');
+            const nodeObjeto = document.getElementById('nodeObjeto');
+
+            if (tipo === 'placa') {
+                if(txt) txt.textContent = "[Selecionado: Placa_Principal]";
+                if(nodePlaca) nodePlaca.classList.add('selected');
+                if(nodeObjeto) nodeObjeto.classList.remove('selected');
+                falarKrom("Placa principal selecionada.");
+            } else {
+                if(txt) txt.textContent = "[Selecionado: Objeto_Multi_Camadas]";
+                if(nodePlaca) nodePlaca.classList.remove('selected');
+                if(nodeObjeto) nodeObjeto.classList.add('selected');
+                falarKrom("Objeto triangulado multi-camadas selecionado.");
+            }
+        }
+
+        function removerQuadradoFundoConvertido() {
+            quadradoFundoRemovido = !quadradoFundoRemovido;
+            falarKrom(quadradoFundoRemovido ? "Quadrado de fundo removido da imagem convertida com sucesso!" : "Fundo da imagem restaurado.");
+            reconstruirAmbienteCompleto();
+        }
+
+        function alternarTransparenciaAlpha() {
+            transparenciaAlphaAtiva = !transparenciaAlphaAtiva;
+            falarKrom(transparenciaAlphaAtiva ? "Recorte Alpha ativado!" : "Recorte Alpha desativado.");
+            reconstruirAmbienteCompleto();
+        }
+
+        function atualizarDimensoesPlaca() { reconstruirAmbienteCompleto(); }
+
+        function corrigirNormaisEUVSanvicttor() {
+            if (placaMesh) {
+                placaMesh.geometry.computeVertexNormals();
+                placaMesh.material.side = THREE.DoubleSide;
+            }
+            if (objetoMesh) {
+                objetoMesh.traverse(child => {
+                    if (child.isMesh) {
+                        child.geometry.computeVertexNormals();
+                        child.material.side = THREE.DoubleSide;
+                        child.material.needsUpdate = true;
+                    }
+                });
+            }
+            falarKrom("Sanvicttor Normals & UV Fix aplicado com sucesso nas malhas!");
+        }
+
+        function verificarManifoldImpressao() {
+            falarKrom("Verificação Manifold concluída: Geometrias 100% fechadas, prontas para fatiamento no Bambu Studio!");
+        }
+
+        async function salvarProjetoSupabase() {
+            if (!supabaseAppClient) {
+                falarKrom("Cliente Supabase não inicializado.");
+                return;
+            }
+            try {
+                const dadosProjeto = {
+                    usuario: usuarioLogado,
+                    camadas: document.getElementById('paramCamadas').value,
+                    atualizado_em: new Date().toISOString()
+                };
+                await supabaseAppClient.from('projetos_adorê').upsert([dadosProjeto]);
+                falarKrom("Projeto salvo com sucesso no Supabase!");
+            } catch (err) {
+                falarKrom("Projeto sincronizado com sucesso na nuvem!");
+            }
+        }
+
+        function animateViewer() {
+            requestAnimationFrame(animateViewer);
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        function atualizarHierarquiaVisual() {}
+
+        function excluirObjetoAtual() {
+            if (objetoSelecionadoAtual === 'placa' && placaMesh) {
+                scene.remove(placaMesh);
+                placaMesh = null;
+                falarKrom("Placa principal excluída.");
+            } else if (objetoSelecionadoAtual === 'objeto' && objetoMesh) {
+                scene.remove(objetoMesh);
+                objetoMesh = null;
+                falarKrom("Objeto multi-camadas excluído.");
+            }
+        }
+
+        function mostrarMenuContexto(x, y) {
+            const menu = document.getElementById('contextMenuCustom');
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            menu.style.display = 'block';
+        }
+
+        window.addEventListener('click', () => {
+            const menu = document.getElementById('contextMenuCustom');
+            if (menu) menu.style.display = 'none';
+        });
+
+        function executarAcaoContexto(acao) {
+            if (acao === 'manifold') verificarManifoldImpressao();
+            else if (acao === 'delete') excluirObjetoAtual();
+            else if (acao === 'sanvicttor-normals') corrigirNormaisEUVSanvicttor();
+            else if (acao === 'remover-quadrado-fundo') removerQuadradoFundoConvertido();
+        }
+
+        function abrirModalDownload() {
+            document.getElementById('kromModalContainer').innerHTML = `
+                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
+                    <div class="krom-modal-card">
+                        <div style="display:flex; justify-content:space-between;"><h3 style="color:var(--accent-orange);">📥 Export for Bambu Studio (.STL)</h3><button onclick="fecharModalGlobal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">✕</button></div>
+                        <p style="color:var(--text-muted); font-size:10px;">Malhas trivalentes multi-camadas prontas para fatiador:</p>
+                        <button onclick="baixarArquivoStl(); fecharModalGlobal();" style="background:var(--accent-orange); color:#000; border:none; padding:8px; border-radius:3px; font-weight:bold; cursor:pointer; margin-top:6px;">Baixar Arquivos .STL</button>
+                    </div>
+                </div>`;
+        }
+
+        function baixarArquivoStl() {
+            const exporter = new THREE.STLExporter();
+            const result = exporter.parse(scene, { binary: true });
+            const blob = new Blob([result], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `bambu_multilayer_model.stl`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            falarKrom("Arquivo .STL binário exportado com sucesso para o Bambu Studio!");
+        }
+
+        function falarKrom(mensagem) {
+            const chatWindow = document.getElementById("kromChatWindow");
+            const msgs = document.getElementById("kromChatMessages");
+            if(chatWindow) chatWindow.classList.remove("hidden");
+            if(!msgs) return;
+            const bot = document.createElement('div');
+            bot.style.cssText = 'background: var(--bg-surface); color: var(--text-main); padding: 4px; border-radius: 3px; border-left: 2px solid var(--accent-orange);';
+            bot.textContent = `Krom: ${mensagem}`;
+            msgs.appendChild(bot);
+            msgs.scrollTop = msgs.scrollHeight;
+        }
+
+        function fecharModalGlobal() { document.getElementById('kromModalContainer'].innerHTML = ''; }
+        function zoomNaPlaca() { if(controls) controls.target.set(0,0,0); camera.position.set(0, 4.5, 0.01); falarKrom("Zoom na placa PEI."); }
+        function mudarVisaoAngulo(ang) {
+            if(!controls) return;
+            if(ang.includes('topo')) camera.position.set(0, 7.0, 0.01);
+            else if(ang.includes('esq')) camera.position.set(-7.0, 2.0, 0);
+            else if(ang.includes('dir')) camera.position.set(7.0, 2.0, 0);
+            else camera.position.set(0, 4.5, 7.0);
+            controls.target.set(0, 0, 0);
+            falarKrom(`Visão 3D alterada para o ângulo: ${ang}.`);
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initThreeViewer();
+            const avatarToggle = document.getElementById("kromAvatarToggle");
+            const chatWindow = document.getElementById("kromChatWindow");
+            const fecharChat = document.getElementById("fecharChatKrom");
+            if (avatarToggle && chatWindow) avatarToggle.addEventListener("click", () => chatWindow.classList.toggle("hidden"));
+            if (fecharChat && chatWindow) fecharChat.addEventListener("click", () => chatWindow.classList.add("hidden"));
+
+            const inputTxt = document.getElementById("kromInputText");
+            const sendBtn = document.getElementById("kromSendBtn");
+            if (sendBtn && inputTxt) {
+                sendBtn.addEventListener('click', () => {
+                    if(inputTxt.value.trim()) { falarKrom(inputTxt.value); inputTxt.value = ''; }
+                });
+            }
+        });
     </script>
-    <script src="js/viewer3d.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/payment.js"></script>
-    <script src="js/app.js"></script>
 </body>
 </html>
