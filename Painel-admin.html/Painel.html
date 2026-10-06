@@ -692,8 +692,8 @@
                     recMsg.textContent = 'Enviando instrução...';
                     try {
                         const result = recoveryChannel === 'email'
-                            ? await supabase.auth.resetPasswordForEmail(destination, { redirectTo: window.location.href })
-                            : await supabase.auth.resetPasswordForPhone(destination, { redirectTo: window.location.href });
+                            ? await supabaseClient.auth.resetPasswordForEmail(destination, { redirectTo: window.location.href })
+                            : await supabaseClient.auth.resetPasswordForPhone(destination, { redirectTo: window.location.href });
                         if (result.error) throw result.error;
                         recMsg.style.color = 'var(--success)';
                         recMsg.textContent = `Instrução enviada para ${destination}.`;

@@ -212,7 +212,7 @@ function verificarPermissaoAdmin(user) {
     const metadata = user.user_metadata || {};
     const emailUser = user.email || "";
     
-    const isPermitido = metadata.role === 'admin' || emailUser.endsWith('@adore.com') || emailUser === "admin@adore.com" || user.id;
+    const isPermitido = metadata.role === 'admin' || emailUser.endsWith('@adore.com') || emailUser === "admin@adore.com";
 
     if (isPermitido) {
         // Atualiza o botão "Entrar" no topo para exibir o e-mail logado

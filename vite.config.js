@@ -25,7 +25,8 @@ export default defineConfig({
     },
     writeBundle() {
       cpSync(resolve(projectRoot, 'dist/Painel.html'), resolve(projectRoot, 'dist/index.html'));
-      cpSync(resolve(painelRoot, 'js'), resolve(projectRoot, 'dist/js'), { recursive: true });
+      cpSync(resolve(projectRoot, 'js'), resolve(projectRoot, 'dist/js'), { recursive: true });
+      cpSync(resolve(painelRoot, 'js'), resolve(projectRoot, 'dist/js'), { recursive: true, force: true });
     },
   }],
   build: {
