@@ -62,9 +62,15 @@ function analisarGeometriaStl(buffer) {
 
         const pesoGramas = (volumeCm3 * 1.24).toFixed(0);
         const horas = (pesoGramas / 12).toFixed(1);
+        const material = document.getElementById('stlMaterial')?.value || 'PLA';
+        const densidadePorMaterial = { PLA: 1.24, PETG: 1.27, ABS: 1.04, Nylon: 1.14 };
+        const massaKg = (pesoGramas / 1000).toFixed(3);
 
         const inputPeso = document.getElementById('calcPeso') || document.getElementById('produtoPeso');
         const inputTempo = document.getElementById('calcHoras') || document.getElementById('calcTempoHoras');
+        const inputX = document.getElementById('stlDimX');
+        const inputY = document.getElementById('stlDimY');
+        const inputZ = document.getElementById('stlDimZ');
 
         if (inputPeso) {
             inputPeso.value = pesoGramas;
@@ -74,6 +80,15 @@ function analisarGeometriaStl(buffer) {
             inputTempo.value = horas;
             inputTempo.dispatchEvent(new Event('input', { bubbles: true }));
         }
+        if (inputX) inputX.value = tamanhoX.toFixed(2);
+        if (inputY) inputY.value = tamanhoY.toFixed(2);
+        if (inputZ) inputZ.value = tamanhoZ.toFixed(2);
+        const stlResultado = document.getElementById('stlResultado');
+        if (stlResultado) {
+            stlResultado.innerHTML = `<strong>STL analisado</strong><br>Dimensões: ${tamanhoX.toFixed(2)} × ${tamanhoY.toFixed(2)} × ${tamanhoZ.toFixed(2)} cm<br>Volume: ${volumeCm3.toFixed(2)} cm³ · Massa: ${massaKg} kg · Material: ${material}<br>Densidade estimada: ${densidadePorMaterial[material] || 1.24} g/cm³`;
+            stlResultado.classList.remove('hidden');
+        }
+        window.stlAnalysis = { tamanhoX, tamanhoY, tamanhoZ, volumeCm3, pesoGramas, material, massaKg };
     } catch (err) {
         console.warn("Não foi possível calcular malha 3D detalhada, a manter dados básicos.", err);
     }

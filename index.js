@@ -7,15 +7,12 @@ const { createClient } = require('@supabase/supabase-js');
 const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
+const app = express();
 
-const cors = require('cors');
 app.use(cors({
     origin: ['https://app.netlify.com', 'https://www.adorepersonalite.com', /\.wixsite\.com$/],
     credentials: true
 }));
-const app = express();
-
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -226,7 +223,74 @@ app.post('/produtos/upload', upload.fields([
 });
 
 // ==========================================
-// 6. INICIALIZAÇÃO DO SERVIDOR (Sempre no fim!)
+// 6. CLIENTES E ORÇAMENTOS
+// ==========================================
+
+app.get('/api/clientes', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('clientes').select('*').order('nome');
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ sucesso: false, mensagem: err.message });
+  }
+});
+
+app.post('/api/clientes', async (req, res) => {
+  try {
+    const { nome, email, telefone, empresa } = req.body;
+    if (!nome || (!email && !telefone)) return res.status(400).json({ sucesso: false, mensagem: 'Nome e pelo menos um contato são obrigatórios.' });
+    const { data, error } = await supabase.from('clientes').insert([{ nome, email: email || null, telefone: telefone || null, empresa: empresa || null }]).select().single();
+    if (error) throw error;
+    res.status(201).json({ sucesso: true, cliente: data });
+  } catch (err) {
+    res.status(500).json({ sucesso: false, mensagem: err.message });
+  }
+});
+
+app.get('/api/orcamentos', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('orcamentos').select('*, clientes(nome)').order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ sucesso: false, mensagem: err.message });
+  }
+});
+
+app.post('/api/orcamentos', async (req, res) => {
+  try {
+    const { clienteId, cliente, itens, observacoes, total, documento } = req.body;
+    if (!Array.isArray(itens) || !itens.length) return res.status(400).json({ sucesso: false, mensagem: 'Adicione pelo menos um item ao orçamento.' });
+    const clienteFinal = clienteId ? { cliente_id: clienteId } : { nome: cliente.nome, email: cliente.email || null, telefone: cliente.telefone || null };
+    const { data, error } = await supabase.from('orcamentos').insert([{
+      ...clienteFinal,
+      itens,
+      observacoes: observacoes || null,
+      total: Number(total) || 0,
+      documento: documento || null
+    }]).select('*, clientes(nome)').single();
+    if (error) throw error;
+    res.status(201).json({ sucesso: true, mensagem: 'Orçamento salvo com sucesso.', orcamento: data });
+  } catch (err) {
+    res.status(500).json({ sucesso: false, mensagem: err.message });
+  }
+});
+
+app.post('/api/orcamentos/:id/enviar', async (req, res) => {
+  try {
+    const { email, nomeDocumento } = req.body;
+    if (!email) return res.status(400).json({ sucesso: false, mensagem: 'Informe um e-mail de destino.' });
+    const { error } = await supabase.from('orcamentos').update({ enviado_em: new Date().toISOString(), documento_nome: nomeDocumento || null }).eq('id', req.params.id);
+    if (error) throw error;
+    res.json({ sucesso: true, mensagem: 'Orçamento enviado com sucesso.' });
+  } catch (err) {
+    res.status(500).json({ sucesso: false, mensagem: err.message });
+  }
+});
+
+// ==========================================
+// 7. INICIALIZAÇÃO DO SERVIDOR (Sempre no fim!)
 // ==========================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

@@ -76,7 +76,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error) {
             if (erroDiv) erroDiv.innerText = "Credenciais inválidas: " + error.message;
+            showToast('Login falhou. Verifique e-mail e senha.', 'error');
         } else {
+            showToast('Login efetuado com sucesso. Bem-vindo à Oficina Adorê!');
             verificarPermissaoAdmin(data.user);
         }
     });
@@ -155,8 +157,9 @@ async function executarLoginDinamico() {
 
     if (error) {
         if (erroDiv) erroDiv.innerText = "Erro: " + error.message;
+        showToast('Login falhou. Verifique as credenciais.', 'error');
     } else {
-        alert("Login efetuado com sucesso na Oficina Adorê!");
+        showToast('Login efetuado com sucesso. Bem-vindo à Oficina Adorê!');
         fecharModalGlobal();
         verificarPermissaoAdmin(data.user);
     }
@@ -221,6 +224,8 @@ function verificarPermissaoAdmin(user) {
         document.getElementById('sidebarNav')?.classList.remove('hidden');
         document.getElementById('mainContent')?.classList.remove('hidden');
         document.getElementById('kromFloatingWidget')?.classList.remove('hidden');
+        document.getElementById('hamburgerToggle')?.classList.remove('hidden');
+        document.getElementById('hamburgerToggle')?.classList.remove('hidden');
         
         const welcome = document.getElementById('userWelcomeTitle');
         if (welcome) {

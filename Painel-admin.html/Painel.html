@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adorê - Painel Administrativo Completo</title>
-    
+
     <!-- Bibliotecas e SDKs Externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
@@ -27,10 +27,10 @@
 
         * { box-sizing: border-box; }
 
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; 
-            background: var(--bg-color); 
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background: var(--bg-color);
             color: var(--text-main);
             display: flex;
             height: 100vh;
@@ -91,6 +91,15 @@
         .nav-link-btn:hover, .nav-link-btn.active, .filter-btn:hover, .filter-btn.active {
             background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color);
         }
+
+        /* Submenus Hierárquicos de Inventário */
+        .submenu-container { padding-left: 12px; border-left: 2px solid var(--border-color); margin: 5px 0 10px 5px; display: none; }
+        .submenu-container.show { display: block; }
+        .sub-item-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-muted);
+            border: none; text-align: left; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 2px;
+        }
+        .sub-item-btn:hover, .sub-item-btn.active { color: var(--primary-color); background: #222; }
 
         .admin-toggle-header {
             font-size: 11px; color: var(--text-muted); text-transform: uppercase;
@@ -160,7 +169,7 @@
 </head>
 <body>
 
-    <button class="hamburger-btn" id="hamburgerToggle">☰</button>
+    <button class="hamburger-btn hidden" id="hamburgerToggle" aria-label="Abrir menu">☰</button>
 
     <!-- TELA DE LOGIN NORMAL -->
     <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
@@ -169,20 +178,25 @@
                 <video id="logoVideo" style="width:100%; height:100%; object-fit:cover;" src="animação logo.mp4" muted playsinline></video>
             </div>
             <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
-            
+
             <form id="loginForm">
                 <label>E-mail</label>
-                <input type="email" id="loginEmail" name="email_admin" autocomplete="off" required value="admin@adore.com">
-                
+                <input type="email" id="loginEmail" name="email_admin" autocomplete="email" required placeholder="admin@adore.com">
+
                 <label>Senha</label>
-                <input type="password" id="loginSenha" name="senha_admin" autocomplete="new-password" required value="123456">
-                
+                <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" required placeholder="Sua senha">
+
                 <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
             </form>
 
-            <button type="button" id="abrirModalRegistoBtn" style="background: transparent; border: none; color: var(--primary-color); font-size: 11px; margin-top: 15px; cursor: pointer; text-decoration: underline;">
-                Primeiro acesso? Criar conta de administrador
-            </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                <button type="button" id="abrirModalRegistoBtn" style="background: transparent; border: none; color: var(--primary-color); font-size: 11px; cursor: pointer; text-decoration: underline;">
+                    Criar conta
+                </button>
+                <button type="button" id="abrirModalRecuperarBtn" style="background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; text-decoration: underline;">
+                    Recuperar senha
+                </button>
+            </div>
 
             <div style="margin: 15px 0; color: var(--text-muted); font-size: 11px; text-transform: uppercase;">OU</div>
 
@@ -222,7 +236,44 @@
             <button class="nav-link-btn active" data-target="viewVitrine">📂 Vitrine & Produtos</button>
             <button class="nav-link-btn" data-target="viewIA">🤖 Criador IA (Meshy/Tripo)</button>
             <button class="nav-link-btn" data-target="viewPedidos">📦 Gestão de Pedidos</button>
-            <button class="nav-link-btn" data-target="viewInventario">🛠️ Inventário & Materiais</button>
+            <button class="nav-link-btn" id="btnAbrirOrcamento" type="button">💰 Gerar Orçamento</button>
+
+            <!-- Inventário e Submenus Jerárquicos -->
+            <button class="nav-link-btn" data-target="viewInventario" id="btnMenuInventario">🛠️ Inventário & Materiais ▼</button>
+
+            <div class="submenu-container" id="submenuInventario">
+                <!-- Empresas -->
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('empresas')">🏢 Empresas</button>
+                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_casa')">• Casa</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_geral')">• Geral / Corporativo</button>
+                </div>
+
+                <!-- Pessoa Física -->
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('pf')">👤 Pessoa Física</button>
+                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_casa')">• Casa</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_pessoal')">• Uso Pessoal</button>
+                </div>
+
+                <!-- Lojas -->
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('lojas')">🛍️ Lojas</button>
+                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_casa')">• Casa</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_vitrine')">• Vitrine Comercial</button>
+                </div>
+
+                <!-- Escolas -->
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('escolas')">🏫 Escolas</button>
+                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_estadual')">• Estadual</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_municipal')">• Municipal</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_particulares')">• Particulares</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_cursos')">• Cursos Livres</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_faculdades')">• Faculdades</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_casa')">• Casa</button>
+                </div>
+            </div>
         </div>
 
         <!-- GERIR CATEGORIAS DE VITRINE -->
@@ -302,6 +353,14 @@
                     <div><label>Preço do Kg (R$)</label><input type="number" step="0.01" id="calcPrecoKg" value="90.00"></div>
                 </div>
                 <div class="calc-row">
+                    <div><label>Dimensão X (cm)</label><input type="number" step="0.01" id="stlDimX" placeholder="Auto"></div>
+                    <div><label>Dimensão Y (cm)</label><input type="number" step="0.01" id="stlDimY" placeholder="Auto"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Dimensão Z (cm)</label><input type="number" step="0.01" id="stlDimZ" placeholder="Auto"></div>
+                    <div><label>Material</label><select id="stlMaterial"><option value="PLA">PLA</option><option value="PETG">PETG</option><option value="ABS">ABS</option><option value="Nylon">Nylon</option></select></div>
+                </div>
+                <div class="calc-row">
                     <div><label>Tempo (Horas)</label><input type="number" step="0.1" id="calcHoras" value="4.5"></div>
                     <div><label>Custo Máquina/h (R$)</label><input type="number" step="0.01" id="calcCustoHora" value="2.50"></div>
                 </div>
@@ -313,6 +372,8 @@
                     <span>Preço Base Sugerido: <strong id="precoSugerido">R$ 0,00</strong></span>
                     <button type="button" class="action-btn" id="btnUsarPreco" style="padding: 6px 10px; background: #2e7d32; color: white;">Aplicar no Preço</button>
                 </div>
+                <div id="stlResultado" class="stl-result hidden" aria-live="polite"></div>
+                <button type="button" class="secondary-btn" id="btnGerarOrcamento" style="margin-top: 10px; width: 100%;">Gerar orçamento com estes dados</button>
             </div>
 
             <div class="card">
@@ -356,7 +417,7 @@
             <div class="card">
                 <h3 style="color: var(--primary-color); margin-top:0;">🤖 Criador de Arte & Modelo 3D por IA</h3>
                 <p style="font-size: 12px; color: var(--text-muted);">Gere conceitos artísticos e envie diretamente para o link de aprovação do cliente.</p>
-                
+
                 <form id="iaGeradorForm">
                     <label>Provedor de IA</label>
                     <select id="iaProvedor">
@@ -417,10 +478,12 @@
                     <div class="calc-row">
                         <div><label>Nome do Material</label><input type="text" id="matNome" placeholder="Ex: PLA Azul / Caneca" required></div>
                         <div>
-                            <label>Tipo de Serviço / Setor</label>
+                            <label>Segmento / Setor</label>
                             <select id="matTipo" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
-                                <option value="3d">Impressão 3D</option>
-                                <option value="sublimacao">Sublimação</option>
+                                <option value="empresas">Empresas</option>
+                                <option value="pf">Pessoa Física</option>
+                                <option value="lojas">Lojas</option>
+                                <option value="escolas">Escolas</option>
                             </select>
                         </div>
                     </div>
@@ -471,34 +534,184 @@
     <div id="modalPrimeiroAcesso" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; align-items: center; justify-content: center;">
         <div class="card" style="width: 100%; max-width: 420px; background: var(--card-bg); border: 1px solid var(--primary-color); position: relative; padding: 25px;">
             <button type="button" id="fecharModalBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
-            
+
             <h3 style="color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; font-size: 16px;">Criar Conta de Administrador</h3>
-            
+
             <form id="formPrimeiroAcesso">
                 <label>Nome Completo</label>
                 <input type="text" id="regNome" required placeholder="Ex: Maria Silva">
-                
+
                 <label>E-mail</label>
                 <input type="email" id="regEmail" required placeholder="admin@adore.com">
-                
+
                 <label>Telefone / WhatsApp</label>
                 <input type="text" id="regTelefone" required placeholder="Ex: (11) 99999-9999">
 
                 <label>Cargo</label>
                 <input type="text" id="regCargo" required placeholder="Ex: Gestora de Produção">
-                
+
                 <label>Senha</label>
                 <input type="password" id="regSenha" required placeholder="Mínimo 6 caracteres">
-                
+
                 <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Registar Administrador</button>
             </form>
             <div id="regErro" style="color: var(--danger); font-size: 11px; margin-top: 10px; text-align: center;"></div>
         </div>
     </div>
 
+    <!-- MODAL DE RECUPERAÇÃO DE SENHA -->
+    <div id="modalRecuperarSenha" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 400px; background: var(--card-bg); border: 1px solid var(--primary-color); position: relative; padding: 25px;">
+            <button type="button" id="fecharModalRecuperarBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
+
+            <h3 style="color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; font-size: 16px;">Recuperar acesso</h3>
+            <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Escolha e-mail ou celular. O envio usa a configuração do Supabase.</p>
+            <div class="calc-row">
+                <button type="button" class="recovery-channel active" data-channel="email">E-mail</button>
+                <button type="button" class="recovery-channel" data-channel="sms">SMS / Celular</button>
+            </div>
+            <form id="formRecuperarSenha">
+                <label id="recLabel">E-mail cadastrado</label>
+                <input type="email" id="recEmailInput" placeholder="admin@adore.com">
+                <input type="tel" id="recPhoneInput" class="hidden" placeholder="+55 11 99999-9999">
+                <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Enviar instrução</button>
+            </form>
+            <div id="recuperarMsg" style="font-size: 11px; margin-top: 10px; text-align: center;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL DE ORÇAMENTO -->
+    <div id="modalOrcamento" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); z-index: 99998; align-items: center; justify-content: center; overflow-y: auto; padding: 24px;">
+        <div class="card" style="width: min(900px, 100%); max-height: 94vh; overflow-y: auto; border-color: var(--primary-color); position: relative;">
+            <div class="budget-modal-controls">
+                <button type="button" id="minimizarModalOrcamento" title="Minimizar">—</button>
+                <button type="button" id="fecharModalOrcamento" title="Fechar">✕</button>
+            </div>
+            <div class="budget-brand-watermark">ADORÊ</div>
+            <h3 style="color: var(--primary-color); margin-top: 0;">💰 Orçamento Adorê</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Selecione um cliente, insira itens e gere o documento.</p>
+            <div class="calc-row">
+                <div><label>Cliente cadastrado</label><select id="budgetClienteSelect"><option value="">Carregando clientes...</option></select></div>
+                <div><label>Nome do cliente</label><input id="budgetClienteNome" placeholder="Nome completo"></div>
+            </div>
+            <div class="calc-row">
+                <div><label>E-mail</label><input id="budgetClienteEmail" type="email" placeholder="cliente@email.com"></div>
+                <div><label>Telefone / WhatsApp</label><input id="budgetClienteTelefone" type="tel" placeholder="+55 11 99999-9999"></div>
+            </div>
+            <div class="calc-row">
+                <div><label>Descrição</label><input id="budgetDescricao" placeholder="Ex: Peça para suporte"></div>
+                <div><label>Quantidade</label><input id="budgetQuantidade" type="number" min="1" placeholder="1"></div>
+            </div>
+            <div class="calc-row">
+                <div><label>Preço unitário (R$)</label><input id="budgetUnitario" type="number" min="0" step="0.01" placeholder="0,00"></div>
+                <div style="display:flex; align-items:flex-end"><button type="button" class="action-btn" id="btnAdicionarItem" style="width:100%;">Adicionar item</button></div>
+            </div>
+            <div id="budgetItensLista" class="budget-items"></div>
+            <div class="budget-total"><span>Total do orçamento</span><strong id="budgetTotal">R$ 0,00</strong></div>
+            <label>Observações</label><textarea id="budgetObservacoes" placeholder="Condições, prazo ou detalhes adicionais"></textarea>
+            <div class="calc-row">
+                <div><label>Anexar PDF</label><input id="budgetDocumentoInput" type="file" accept="application/pdf"></div>
+                <div><label>Status do documento</label><div id="budgetDocumentoStatus" class="budget-document-status">Nenhum PDF anexado</div></div>
+            </div>
+            <div id="budgetOrcamentosLista" class="budget-history"></div>
+            <div class="calc-row" style="margin-top: 10px;">
+                <button type="button" class="secondary-btn" id="btnGerarPdf" style="width:100%;">Baixar PDF</button>
+                <button type="button" class="action-btn" id="btnSalvarOrcamento" style="width:100%;">Salvar e enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
     <!-- SCRIPTS MODULARES -->
     <script>
         const API_URL = "https://adore-api-backend.onrender.com";
+
+        // Lógica de abertura do submenu de inventário e modais de recuperação
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnMenuInv = document.getElementById('btnMenuInventario');
+            const subMenuInv = document.getElementById('submenuInventario');
+            if(btnMenuInv && subMenuInv) {
+                btnMenuInv.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    subMenuInv.classList.toggle('show');
+                });
+            }
+
+            // Modal Recuperação de Senha
+            const abrirRec = document.getElementById('abrirModalRecuperarBtn');
+            const fecharRec = document.getElementById('fecharModalRecuperarBtn');
+            const modalRec = document.getElementById('modalRecuperarSenha');
+            const formRec = document.getElementById('formRecuperarSenha');
+            const recMsg = document.getElementById('recuperarMsg');
+            let recoveryChannel = 'email';
+
+            if(abrirRec) abrirRec.addEventListener('click', () => modalRec.classList.remove('hidden'));
+            if(fecharRec) fecharRec.addEventListener('click', () => modalRec.classList.add('hidden'));
+            document.getElementById('btnAbrirOrcamento')?.addEventListener('click', abrirModalOrcamento);
+            document.getElementById('btnGerarOrcamento')?.addEventListener('click', () => {
+                if (carregarDadosStlNoOrcamento()) abrirModalOrcamento();
+                else abrirModalOrcamento();
+            });
+            document.getElementById('minimizarModalOrcamento')?.addEventListener('click', () => {
+                const modal = document.getElementById('modalOrcamento');
+                modal.classList.add('hidden');
+                document.body.classList.remove('modal-open');
+                showToast('Orçamento minimizado.');
+            });
+            document.getElementById('fecharModalOrcamento')?.addEventListener('click', fecharModalOrcamento);
+            document.getElementById('modalOrcamento')?.addEventListener('click', event => {
+                if (event.target.id === 'modalOrcamento') fecharModalOrcamento();
+            });
+            document.getElementById('btnAdicionarItem')?.addEventListener('click', adicionarItemOrcamento);
+            document.getElementById('btnSalvarOrcamento')?.addEventListener('click', salvarOrcamento);
+            document.getElementById('btnGerarPdf')?.addEventListener('click', baixarPdfOrcamento);
+            document.getElementById('budgetDocumentoInput')?.addEventListener('change', event => anotarDocumentoOrcamento(event.target.files[0]));
+            document.querySelectorAll('.recovery-channel').forEach(button => {
+                button.addEventListener('click', () => {
+                    recoveryChannel = button.dataset.channel;
+                    document.querySelectorAll('.recovery-channel').forEach(item => item.classList.toggle('active', item === button));
+                    document.getElementById('recEmailInput').classList.toggle('hidden', recoveryChannel !== 'email');
+                    document.getElementById('recPhoneInput').classList.toggle('hidden', recoveryChannel !== 'sms');
+                    document.getElementById('recLabel').textContent = recoveryChannel === 'email' ? 'E-mail cadastrado' : 'Número de celular';
+                });
+            });
+
+            if(formRec) {
+                formRec.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const destination = recoveryChannel === 'email'
+                        ? document.getElementById('recEmailInput').value.trim()
+                        : document.getElementById('recPhoneInput').value.trim();
+                    if (!destination) {
+                        recMsg.style.color = 'var(--danger)';
+                        recMsg.textContent = 'Preencha o endereço ou número indicado.';
+                        return;
+                    }
+                    recMsg.style.color = 'var(--text-muted)';
+                    recMsg.textContent = 'Enviando instrução...';
+                    try {
+                        const result = recoveryChannel === 'email'
+                            ? await supabase.auth.resetPasswordForEmail(destination, { redirectTo: window.location.href })
+                            : await supabase.auth.resetPasswordForPhone(destination, { redirectTo: window.location.href });
+                        if (result.error) throw result.error;
+                        recMsg.style.color = 'var(--success)';
+                        recMsg.textContent = `Instrução enviada para ${destination}.`;
+                    } catch (err) {
+                        recMsg.style.color = 'var(--danger)';
+                        recMsg.textContent = 'Erro ao enviar: ' + (err.message || 'Tente novamente.');
+                    }
+                });
+            }
+        });
+
+        // Funções de filtro de inventário estendidas
+        function filtrarInventarioSetor(setor) {
+            console.log("Filtrar inventário por setor principal:", setor);
+        }
+        function filtrarInventarioCategoria(categoria) {
+            console.log("Filtrar inventário por categoria específica:", categoria);
+        }
     </script>
     <script src="js/auth.js"></script>
     <script src="js/vitrine.js"></script>
@@ -510,6 +723,7 @@
     <script src="js/layout.js"></script>
     <script src="js/perfil-persistencia.js"></script>
     <script src="js/stl-reader.js"></script>
+    <script src="js/budget.js"></script>
     <script src="js/paymentcontroller.js"></script>
 </body>
 </html>
