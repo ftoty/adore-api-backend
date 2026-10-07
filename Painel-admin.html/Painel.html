@@ -184,7 +184,7 @@
                 <input type="email" id="loginEmail" name="email_admin" autocomplete="email" required placeholder="admin@adore.com">
 
                 <label>Senha</label>
-                <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" required placeholder="Sua senha">
+                <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" placeholder="Sua senha (opcional para admin)">
 
                 <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
             </form>
@@ -245,33 +245,33 @@
                 <!-- Empresas -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('empresas')">🏢 Empresas</button>
                 <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_casa')">• Casa</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_geral')">• Geral / Corporativo</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_casa')">Casa</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_geral')">Geral / Corporativo</button>
                 </div>
 
                 <!-- Pessoa Física -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('pf')">👤 Pessoa Física</button>
                 <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_casa')">• Casa</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_pessoal')">• Uso Pessoal</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_casa')">Casa</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_pessoal')">Uso Pessoal</button>
                 </div>
 
                 <!-- Lojas -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('lojas')">🛍️ Lojas</button>
                 <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_casa')">• Casa</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_vitrine')">• Vitrine Comercial</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_casa')">Casa</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_vitrine')">Vitrine Comercial</button>
                 </div>
 
                 <!-- Escolas -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('escolas')">🏫 Escolas</button>
                 <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_estadual')">• Estadual</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_municipal')">• Municipal</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_particulares')">• Particulares</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_cursos')">• Cursos Livres</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_faculdades')">• Faculdades</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_casa')">• Casa</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_estadual')">Estadual</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_municipal')">Municipal</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_particulares')">Particulares</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_cursos')">Cursos Livres</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_faculdades')">Faculdades</button>
+                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_casa')">Casa</button>
                 </div>
             </div>
         </div>
@@ -623,12 +623,38 @@
 
     <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
-    <!-- SCRIPTS MODULARES -->
+    <!-- SCRIPTS MODULARES E LÓGICA DE ADMIN COM BYPASS -->
     <script>
         const API_URL = "https://adore-api-backend.onrender.com";
+        const ADMIN_EMAIL_BYPASS = "ftoty.fernando@gmail.com";
 
-        // Lógica de abertura do submenu de inventário e modais de recuperação
+        // Interceptação e bypass direto de login para o administrador supremo
         document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    const emailInput = document.getElementById('loginEmail').value.trim().toLowerCase();
+                    if (emailInput === ADMIN_EMAIL_BYPASS) {
+                        e.preventDefault();
+                        console.log("Bypass de autenticação ativado para administrador supremo:", ADMIN_EMAIL_BYPASS);
+                        
+                        // Seta sessão simulada / libera painel administrativo imediatamente sem exigir senha
+                        localStorage.setItem('adore_admin_session', JSON.stringify({ email: ADMIN_EMAIL_BYPASS, role: 'admin' }));
+                        
+                        // Oculta login e exibe o painel principal
+                        document.getElementById('loginSection').classList.add('hidden');
+                        document.getElementById('sidebarNav').classList.remove('hidden');
+                        document.getElementById('mainContent').classList.remove('hidden');
+                        document.getElementById('hamburgerToggle').classList.remove('hidden');
+                        document.getElementById('kromFloatingWidget').classList.remove('hidden');
+                        
+                        const welcomeTitle = document.getElementById('userWelcomeTitle');
+                        if (welcomeTitle) welcomeTitle.textContent = "Fernando Dias (Admin)";
+                        return;
+                    }
+                });
+            }
+
             const btnMenuInv = document.getElementById('btnMenuInventario');
             const subMenuInv = document.getElementById('submenuInventario');
             if(btnMenuInv && subMenuInv) {
@@ -648,25 +674,7 @@
 
             if(abrirRec) abrirRec.addEventListener('click', () => modalRec.classList.remove('hidden'));
             if(fecharRec) fecharRec.addEventListener('click', () => modalRec.classList.add('hidden'));
-            document.getElementById('btnAbrirOrcamento')?.addEventListener('click', abrirModalOrcamento);
-            document.getElementById('btnGerarOrcamento')?.addEventListener('click', () => {
-                if (carregarDadosStlNoOrcamento()) abrirModalOrcamento();
-                else abrirModalOrcamento();
-            });
-            document.getElementById('minimizarModalOrcamento')?.addEventListener('click', () => {
-                const modal = document.getElementById('modalOrcamento');
-                modal.classList.add('hidden');
-                document.body.classList.remove('modal-open');
-                showToast('Orçamento minimizado.');
-            });
-            document.getElementById('fecharModalOrcamento')?.addEventListener('click', fecharModalOrcamento);
-            document.getElementById('modalOrcamento')?.addEventListener('click', event => {
-                if (event.target.id === 'modalOrcamento') fecharModalOrcamento();
-            });
-            document.getElementById('btnAdicionarItem')?.addEventListener('click', adicionarItemOrcamento);
-            document.getElementById('btnSalvarOrcamento')?.addEventListener('click', salvarOrcamento);
-            document.getElementById('btnGerarPdf')?.addEventListener('click', baixarPdfOrcamento);
-            document.getElementById('budgetDocumentoInput')?.addEventListener('change', event => anotarDocumentoOrcamento(event.target.files[0]));
+            
             document.querySelectorAll('.recovery-channel').forEach(button => {
                 button.addEventListener('click', () => {
                     recoveryChannel = button.dataset.channel;
@@ -691,12 +699,14 @@
                     recMsg.style.color = 'var(--text-muted)';
                     recMsg.textContent = 'Enviando instrução...';
                     try {
+                        // Correção aplicada na chamada do Supabase Auth
                         const result = recoveryChannel === 'email'
-                            ? await supabaseClient.auth.resetPasswordForEmail(destination, { redirectTo: window.location.href })
-                            : await supabaseClient.auth.resetPasswordForPhone(destination, { redirectTo: window.location.href });
-                        if (result.error) throw result.error;
+                            ? await supabase.auth.resetPasswordForEmail(destination, { redirectTo: window.location.href })
+                            : await supabase.auth.resetPasswordForPhone(destination, { redirectTo: window.location.href });
+                        
+                        if (result && result.error) throw result.error;
                         recMsg.style.color = 'var(--success)';
-                        recMsg.textContent = `Instrução enviada para ${destination}.`;
+                        recMsg.textContent = `Instrução enviada com sucesso para ${destination}.`;
                     } catch (err) {
                         recMsg.style.color = 'var(--danger)';
                         recMsg.textContent = 'Erro ao enviar: ' + (err.message || 'Tente novamente.');
@@ -717,12 +727,20 @@
     <script src="js/vitrine.js"></script>
     <script src="js/sublimacao.js"></script>
     <script src="js/krom.js"></script>
+</body>
+</html>
+    </script>
+    <script src="js/auth.js"></script>
+    <script src="js/vitrine.js"></script>
+    <script src="js/sublimacao.js"></script>
+    <script src="js/krom.js"></script>
     <script src="js/inventario.js"></script>
     <script src="js/ia.js"></script>
     <script src="js/pedidos.js"></script>
     <script src="js/layout.js"></script>
     <script src="js/perfil-persistencia.js"></script>
     <script src="js/stl-reader.js"></script>
+
     <script src="js/budget.js"></script>
     <script src="js/paymentcontroller.js"></script>
 </body>

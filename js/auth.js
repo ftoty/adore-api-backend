@@ -64,6 +64,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Submissão do Login normal estático
+    function verificarLogin(email, senha) {
+  const EMAIL_ADMIN = "ftoty.fernando@gmail.com";
+
+  // Libera o acesso direto para o admin sem checar senha
+  if (email === EMAIL_ADMIN) {
+    return {
+      sucesso: true,
+      usuario: { email: email, role: "admin" },
+      mensagem: "Acesso de administrador liberado sem autenticação."
+    };
+  }
+
+  // Validação normal para os demais usuários
+  const SUPABASE_URL = 'https://mlfgluwcuzddwijffrbe.supabase.co';
+const SUPABASE_ANON_KEY = 'SUA_CHAVE_ANON_PUBLICA'; // 2b501137-7bf8-43eb-bd12-9ccc0a2f7b3d
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return validarSenhaNoBanco(email, senha);
+}
     loginForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('loginEmail').value;
