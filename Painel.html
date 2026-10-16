@@ -1,18 +1,26 @@
 ﻿<!DOCTYPE html>
-<html lang='pt-BR'>
+<html lang="pt-BR">
 <head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adorê - Painel Administrativo Completo & Vitrine 3D</title>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root { --primary-color: #d4af37; --primary-hover: #b89728; --bg-color: #121212; --card-bg: #1e1e1e; --sidebar-bg: #181818; --text-main: #f5f5f5; --text-muted: #aaaaaa; --border-color: #333333; --danger: #d9534f; --warning: #f0ad4e; --success: #2e7d32; }
         * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
         aside, .sidebar { width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 15px; position: relative; z-index: 10; overflow-y: auto !important; max-height: 100vh; }
+        .hamburger-btn { position: absolute; top: 20px; left: 20px; background: #222; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px; cursor: pointer; z-index: 20; font-size: 16px; }
+        .sidebar-brand { text-align: center; margin-bottom: 20px; }
+        .sidebar-brand video { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .sidebar-brand h2 { font-size: 14px; color: var(--primary-color); margin: 6px 0 0 0; text-transform: uppercase; }
+        .nav-section { margin-bottom: 15px; }
+        .nav-section h4 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        .nav-link-btn { display: block; width: 100%; background: transparent; color: var(--text-main); border: 1px solid transparent; text-align: left; padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 4px; }
+        .nav-link-btn:hover, .nav-link-btn.active { background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color); }
         .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid var(--border-color); }
         .hidden { display: none !important; }
         form { display: flex; flex-direction: column; gap: 10px; }
@@ -20,116 +28,133 @@
         input, button, select, textarea { padding: 9px 12px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: #2a2a2a; color: white; outline: none; }
         button.action-btn { background: var(--primary-color); color: #121212; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 12px; }
         button.action-btn:hover { background: var(--primary-hover); }
-        main { flex: 1; padding: 25px; overflow-y: auto; }
-        .nav-link-btn { display: block; width: 100%; background: transparent; color: var(--text-main); border: 1px solid transparent; text-align: left; padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 4px; }
-        .nav-link-btn:hover, .nav-link-btn.active { background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color); }
+        main { flex: 1; padding: 25px; padding-left: 65px; overflow-y: auto; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+        .product-card { background: #252525; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .product-thumb { width: 100%; height: 120px; background: #111; border-radius: 4px; object-fit: cover; }
+        .logout-btn { background: var(--danger); color: white; padding: 8px; font-size: 11px; margin-top: 15px; width: 100%; }
     </style>
 </head>
 <body>
-    <div id='loginSection' style='max-width: 400px; margin: 60px auto; width: 100%;'>
-        <div class='card' style='text-align: center;'>
-            <!-- Selo de Status do Netlify -->
-            <div style='margin-bottom: 15px;'>
-                <a href='https://app.netlify.com/projects/paineladoreadmin/deploys' target='_blank'>
-                    <img src='https://api.netlify.com/api/v1/badges/c6237a63-52fb-4f96-8dc0-8f490e3214b1/deploy-status' alt='Netlify Status'>
-                </a>
-            </div>
-
-            <h2 style='color: var(--primary-color); font-size: 18px; margin-bottom: 20px;'>Adorê Adm</h2>
-            
-            <!-- Formulário de Login (Apenas botão Entrar visível) -->
-            <form id='loginForm'>
+    <button class="hamburger-btn hidden" id="hamburgerToggle">☰</button>
+    <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
+        <div class="card" style="text-align: center;">
+            <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
+            <form id="loginForm">
                 <label>E-mail</label>
-                <input type='email' id='loginEmail' required placeholder='seu.email@adore.com'>
-                
-                <div id='campoSenhaContainer'>
+                <input type="email" id="loginEmail" required placeholder="seu.email@adore.com">
+                <div id="campoSenhaContainer">
                     <label>Senha</label>
-                    <input type='password' id='loginSenha' placeholder='Sua senha (opcional para admins)'>
+                    <input type="password" id="loginSenha" placeholder="Sua senha">
                 </div>
-
-                <button type='submit' id='btnSubmitLogin' class='action-btn' style='padding: 12px; margin-top: 10px;'>Entrar no Painel</button>
+                <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
             </form>
-
-            <div style='margin-top: 12px; text-align: right;'>
-                <a href='#' id='linkEsqueceuSenha' style='font-size: 11px; color: var(--primary-color); text-decoration: none;'>Esqueceu a senha? Recuperar acesso</a>
+            <div style="margin-top: 12px; text-align: right;">
+                <a href="#" id="linkEsqueceuSenha" style="font-size: 11px; color: var(--primary-color); text-decoration: none;">Esqueceu a senha?</a>
             </div>
-
-            <!-- Formulário de Recuperação (Apenas botão Enviar Link visível) -->
-            <form id='recuperarSenhaForm' class='hidden' style='margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;'>
-                <h4 style='color: var(--primary-color); font-size: 12px; margin-bottom: 5px;'>Recuperação de Senha</h4>
+            <form id="recuperarSenhaForm" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                <h4 style="color: var(--primary-color); font-size: 12px; margin-bottom: 5px;">Recuperação de Senha</h4>
                 <label>Confirme seu E-mail</label>
-                <input type='email' id='recuperarEmailInput' placeholder='seu.email@adore.com' required>
-                <button type='submit' id='btnSubmitRecuperar' class='action-btn' style='background: var(--warning); color: #121212; padding: 10px; margin-top: 5px;'>Enviar Instruções de Recuperação</button>
-                <button type='button' id='btnVoltarLogin' style='background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; margin-top: 5px;'>Voltar ao Login</button>
+                <input type="email" id="recuperarEmailInput" placeholder="seu.email@adore.com" required>
+                <button type="submit" id="btnSubmitRecuperar" class="action-btn hidden" style="background: var(--warning); color: #121212; padding: 10px; margin-top: 5px; width: 100%;">Enviar Instruções</button>
+                <button type="button" id="btnVoltarLogin" style="background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; margin-top: 5px; width: 100%;">Voltar ao Login</button>
             </form>
-            <div id='loginErro' style='color: var(--danger); font-size: 11px; margin-top: 10px;'></div>
+            <div id="loginErro" style="color: var(--danger); font-size: 11px; margin-top: 10px;"></div>
         </div>
     </div>
 
-    <aside id='sidebarNav' class='hidden'>
-        <h2>Adorê Adm</h2>
-        <button class='nav-link-btn active' data-target='viewVitrine'>📂 Vitrine & Produtos</button>
-        <button class='nav-link-btn' data-target='viewNotaFiscal'>📜 Emissão de Nota Fiscal</button>
+    <aside id="sidebarNav" class="hidden">
+        <div class="sidebar-brand" style="margin-top: 10px;">
+            <h2 id="userWelcomeTitle">Adorê Adm</h2>
+        </div>
+        <div class="nav-section">
+            <h4>Navegação Principal</h4>
+            <button class="nav-link-btn active" data-target="viewVitrine" type="button">📂 Vitrine & Produtos</button>
+            <button class="nav-link-btn" data-target="viewNotaFiscal" type="button">📜 Emissão de Nota Fiscal</button>
+        </div>
+        <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
     </aside>
 
-    <main id='mainContent' class='hidden'>
-        <div id='viewVitrine' class='admin-view'><h3>Bem-vindo à Vitrine</h3></div>
-        <div id='viewNotaFiscal' class='admin-view hidden'><h3>Módulo de Nota Fiscal</h3></div>
+    <main id="mainContent" class="hidden full">
+        <div id="viewVitrine" class="admin-view">
+            <div class="card">
+                <h3 style="color: var(--primary-color);">Vitrine de Produtos</h3>
+                <div id="vitrineCategorizadaContainer"><p style="color: var(--text-muted);">Carregando vitrine...</p></div>
+            </div>
+        </div>
+        <div id="viewNotaFiscal" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color);">Emissão de Nota Fiscal</h3>
+                <p style="color: var(--text-muted);">Módulo ativo com certificado digital A1/A3.</p>
+            </div>
+        </div>
     </main>
 
     <script>
-        const ADMIN_EMAILS = ['ftoty.fernando@gmail.com', 'adorepersonalite@gmail.com'];
+        const ADMIN_EMAILS = ["ftoty.fernando@gmail.com", "adorepersonalite@gmail.com"];
+        function isAdminEmail(email) {
+            return email && ADMIN_EMAILS.includes(email.trim().toLowerCase());
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const loginForm = document.getElementById('loginForm');
             const recuperarSenhaForm = document.getElementById('recuperarSenhaForm');
             const linkEsqueceuSenha = document.getElementById('linkEsqueceuSenha');
             const btnVoltarLogin = document.getElementById('btnVoltarLogin');
+            const btnSubmitLogin = document.getElementById('btnSubmitLogin');
+            const btnSubmitRecuperar = document.getElementById('btnSubmitRecuperar');
             const loginEmailInput = document.getElementById('loginEmail');
             const loginSection = document.getElementById('loginSection');
             const sidebarNav = document.getElementById('sidebarNav');
             const mainContent = document.getElementById('mainContent');
+            const hamburgerToggle = document.getElementById('hamburgerToggle');
             const loginErro = document.getElementById('loginErro');
 
-            linkEsqueceuSenha.addEventListener('click', (e) => {
+            linkEsqueceuSenha?.addEventListener('click', (e) => {
                 e.preventDefault();
                 loginForm.classList.add('hidden');
+                btnSubmitLogin.classList.add('hidden');
                 recuperarSenhaForm.classList.remove('hidden');
-                loginErro.textContent = '';
+                btnSubmitRecuperar.classList.remove('hidden');
+                loginErro.textContent = "";
             });
 
-            btnVoltarLogin.addEventListener('click', (e) => {
+            btnVoltarLogin?.addEventListener('click', (e) => {
                 e.preventDefault();
                 recuperarSenhaForm.classList.add('hidden');
+                btnSubmitRecuperar.classList.add('hidden');
                 loginForm.classList.remove('hidden');
-                loginErro.textContent = '';
+                btnSubmitLogin.classList.remove('hidden');
+                loginErro.textContent = "";
             });
 
-            loginForm.addEventListener('submit', (e) => {
+            loginForm?.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const email = loginEmailInput.value.trim().toLowerCase();
-                const senha = document.getElementById('loginSenha').value;
+                const emailVal = loginEmailInput.value.trim().toLowerCase();
+                const senhaVal = document.getElementById('loginSenha').value;
 
-                if (ADMIN_EMAILS.includes(email) || senha.length > 0) {
-                    localStorage.setItem('adore_logged_user', email);
+                if (isAdminEmail(emailVal) || senhaVal.length > 0) {
+                    localStorage.setItem('adore_logged_user', emailVal);
                     loginSection.classList.add('hidden');
                     sidebarNav.classList.remove('hidden');
                     mainContent.classList.remove('hidden');
+                    hamburgerToggle.classList.remove('hidden');
                 } else {
-                    loginErro.textContent = 'Digite a senha de acesso.';
+                    loginErro.textContent = "Por favor, digite a senha de acesso.";
                 }
             });
 
-            recuperarSenhaForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                loginErro.style.color = 'var(--success)';
-                loginErro.textContent = 'Instruções enviadas com sucesso!';
-                setTimeout(() => {
-                    recuperarSenhaForm.classList.add('hidden');
-                    loginForm.classList.remove('hidden');
-                    loginErro.textContent = '';
-                    loginErro.style.color = 'var(--danger)';
-                }, 3000);
+            document.getElementById('btnLogout')?.addEventListener('click', () => {
+                localStorage.removeItem('adore_logged_user');
+                location.reload();
             });
+
+            if (localStorage.getItem('adore_logged_user')) {
+                loginSection.classList.add('hidden');
+                sidebarNav.classList.remove('hidden');
+                mainContent.classList.remove('hidden');
+                hamburgerToggle.classList.remove('hidden');
+            }
         });
     </script>
 </body>
