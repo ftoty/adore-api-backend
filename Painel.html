@@ -37,7 +37,7 @@
 
             <h2 style='color: var(--primary-color); font-size: 18px; margin-bottom: 20px;'>Adorê Adm</h2>
             
-            <!-- Formulário de Login (Sem senha para administradores) -->
+            <!-- Formulário de Login (Apenas botão Entrar visível) -->
             <form id='loginForm'>
                 <label>E-mail</label>
                 <input type='email' id='loginEmail' required placeholder='seu.email@adore.com'>
@@ -54,12 +54,12 @@
                 <a href='#' id='linkEsqueceuSenha' style='font-size: 11px; color: var(--primary-color); text-decoration: none;'>Esqueceu a senha? Recuperar acesso</a>
             </div>
 
-            <!-- Formulário de Recuperação -->
+            <!-- Formulário de Recuperação (Apenas botão Enviar Link visível) -->
             <form id='recuperarSenhaForm' class='hidden' style='margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;'>
                 <h4 style='color: var(--primary-color); font-size: 12px; margin-bottom: 5px;'>Recuperação de Senha</h4>
                 <label>Confirme seu E-mail</label>
                 <input type='email' id='recuperarEmailInput' placeholder='seu.email@adore.com' required>
-                <button type='submit' id='btnSubmitRecuperar' class='action-btn hidden' style='background: var(--warning); color: #121212; padding: 10px; margin-top: 5px;'>Enviar Instruções de Recuperação</button>
+                <button type='submit' id='btnSubmitRecuperar' class='action-btn' style='background: var(--warning); color: #121212; padding: 10px; margin-top: 5px;'>Enviar Instruções de Recuperação</button>
                 <button type='button' id='btnVoltarLogin' style='background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; margin-top: 5px;'>Voltar ao Login</button>
             </form>
             <div id='loginErro' style='color: var(--danger); font-size: 11px; margin-top: 10px;'></div>
@@ -84,8 +84,6 @@
             const recuperarSenhaForm = document.getElementById('recuperarSenhaForm');
             const linkEsqueceuSenha = document.getElementById('linkEsqueceuSenha');
             const btnVoltarLogin = document.getElementById('btnVoltarLogin');
-            const btnSubmitLogin = document.getElementById('btnSubmitLogin');
-            const btnSubmitRecuperar = document.getElementById('btnSubmitRecuperar');
             const loginEmailInput = document.getElementById('loginEmail');
             const loginSection = document.getElementById('loginSection');
             const sidebarNav = document.getElementById('sidebarNav');
@@ -95,18 +93,14 @@
             linkEsqueceuSenha.addEventListener('click', (e) => {
                 e.preventDefault();
                 loginForm.classList.add('hidden');
-                btnSubmitLogin.classList.add('hidden');
                 recuperarSenhaForm.classList.remove('hidden');
-                btnSubmitRecuperar.classList.remove('hidden');
                 loginErro.textContent = '';
             });
 
             btnVoltarLogin.addEventListener('click', (e) => {
                 e.preventDefault();
                 recuperarSenhaForm.classList.add('hidden');
-                btnSubmitRecuperar.classList.add('hidden');
                 loginForm.classList.remove('hidden');
-                btnSubmitLogin.classList.remove('hidden');
                 loginErro.textContent = '';
             });
 
@@ -115,7 +109,6 @@
                 const email = loginEmailInput.value.trim().toLowerCase();
                 const senha = document.getElementById('loginSenha').value;
 
-                // Libera acesso imediato sem senha para os admins cadastrados
                 if (ADMIN_EMAILS.includes(email) || senha.length > 0) {
                     localStorage.setItem('adore_logged_user', email);
                     loginSection.classList.add('hidden');
@@ -132,9 +125,7 @@
                 loginErro.textContent = 'Instruções enviadas com sucesso!';
                 setTimeout(() => {
                     recuperarSenhaForm.classList.add('hidden');
-                    btnSubmitRecuperar.classList.add('hidden');
                     loginForm.classList.remove('hidden');
-                    btnSubmitLogin.classList.remove('hidden');
                     loginErro.textContent = '';
                     loginErro.style.color = 'var(--danger)';
                 }, 3000);
