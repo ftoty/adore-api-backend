@@ -1,5 +1,5 @@
 [build]
-  command = "npm run vite-build"
+  command = "npm ci --include=dev --include=optional --legacy-peer-deps && npm run vite-build"
   publish = "dist"
 
 [[redirects]]
