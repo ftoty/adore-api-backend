@@ -2,8 +2,10 @@
 // MÓDULO DE INTELIGÊNCIA ARTIFICIAL & APROVAÇÕES
 // ==========================================
 
-// Variável de controle de API (pode ajustar para o seu endpoint real)
-const API_URL = window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://api.adorepersonalite.com';
+const IA_API_URL = window.ADORE_API_URL ||
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:3000'
+        : 'https://adore-api-backend.onrender.com');
 
 document.addEventListener('DOMContentLoaded', () => {
     const iaForm = document.getElementById('iaGeradorForm');
@@ -16,94 +18,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Função chamada pelo botão central "✨ Gerar modelo" do estúdio 3D
+// Função chamada pelo botão central "Gerar modelo" do estúdio 3D
 function executarConversao3D() {
-    const promptModal = prompt("Descreva o modelo 3D ou arte que deseja forjar na Oficina Adorê:");
+    const promptModal = prompt("Descreva o modelo 3D que deseja gerar:");
     if (!promptModal) return;
-
-    const contatoModal = prompt("Informe o e-mail ou WhatsApp do cliente para envio do link de aprovação:") || "cliente@adore.com";
-
-    // Dispara a rotina de envio simulando o formulário ou chamando a API diretamente
-    dispararGeracaoIA(promptModal, "meshy", contatoModal);
+    dispararGeracaoIA(promptModal);
 }
 
-// Lógica central de comunicação com a API de IA
-async function dispararGeracaoIA(prompt, provedor, contato) {
+async function chamarApiMeshy(caminho, opcoes = {}) {
+    const resposta = await fetch(`${IA_API_URL}${caminho}`, opcoes);
+    const dados = await resposta.json().catch(() => null);
+    if (!resposta.ok || !dados?.success) {
+        throw new Error(dados?.message || `Falha na API de modelagem (HTTP ${resposta.status}).`);
+    }
+    return dados;
+}
+
+async function dispararGeracaoIA(prompt) {
     const statusDiv = document.getElementById('iaResultadoStatus');
+    const statusTexto = document.getElementById('iaResultadoTexto');
+    const arquivoDiv = document.getElementById('iaResultadoArquivo');
     const linkVisual = document.getElementById('linkAprovacaoVisual');
-
-    if (statusDiv) {
-        statusDiv.classList.remove('hidden');
-        const pTag = statusDiv.querySelector('p');
-        if (pTag) pTag.innerHTML = `<strong>Status:</strong> A comunicar com a API do ${provedor.toUpperCase()}... Por favor aguarde.`;
-    }
-
-    if (linkVisual) {
-        linkVisual.innerText = "A gerar modelo 3D...";
-        linkVisual.href = "#";
-    }
-
+    const botao = document.querySelector('#iaGeradorForm button[type="submit"]');
+    statusDiv?.classList.remove('hidden');
+    arquivoDiv?.classList.add('hidden');
+    if (linkVisual) linkVisual.removeAttribute('href');
+    if (botao) botao.disabled = true;
+    if (statusTexto) statusTexto.textContent = 'Enviando a descrição para o Meshy...';
     try {
-        const resposta = await fetch(`${API_URL}/api/ia/gerar`, {
+        const tarefa = await chamarApiMeshy('/api/ia/3d/tasks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, provedor, contato })
+            body: JSON.stringify({ mode: 'text', prompt })
         });
-
-        const data = await resposta.json();
-
-        if (resposta.ok && data.sucesso) {
-            atualizarInterfaceSucesso(statusDiv, linkVisual, contato, data.link_aprovacao);
-            alert('Arte gerada e link de aprovação encaminhado ao cliente com sucesso!');
-        } else {
-            lancarModoSimulador(statusDiv, linkVisual, provedor);
+        if (statusTexto) statusTexto.textContent = `Tarefa ${tarefa.taskId} criada. Aguardando o Meshy...`;
+        const inicio = Date.now();
+        let resultado;
+        while (Date.now() - inicio < 60 * 60 * 1000) {
+            await new Promise((resolve) => window.setTimeout(resolve, 5000));
+            resultado = await chamarApiMeshy(
+                `/api/ia/3d/tasks/${encodeURIComponent(tarefa.taskId)}?mode=text`
+            );
+            if (statusTexto) {
+                statusTexto.textContent = `Meshy: ${resultado.status} · ${Math.round(resultado.progress || 0)}%`;
+            }
+            if (resultado.status === 'SUCCEEDED') break;
+            if (resultado.status === 'FAILED' || resultado.status === 'CANCELED') {
+                throw new Error(resultado.message || `A geração terminou com status ${resultado.status}.`);
+            }
         }
-    } catch (err) {
-        console.warn("API offline, ativando modo simulador seguro:", err);
-        lancarModoSimulador(statusDiv, linkVisual, provedor);
+        if (!resultado || resultado.status !== 'SUCCEEDED') {
+            throw new Error(`A geração segue em andamento. Guarde o identificador da tarefa: ${tarefa.taskId}.`);
+        }
+        const formato = ['glb', 'fbx', 'obj'].find((item) => /^https:\/\//i.test(resultado.modelUrls?.[item] || ''));
+        if (!formato) {
+            throw new Error('A tarefa terminou, mas o Meshy não retornou um link de modelo para baixar.');
+        }
+        linkVisual.href = resultado.modelUrls[formato];
+        linkVisual.textContent = `Baixar modelo ${formato.toUpperCase()}`;
+        arquivoDiv?.classList.remove('hidden');
+        if (statusTexto) statusTexto.textContent = 'Modelo 3D gerado e disponível para download.';
+    } catch (erro) {
+        console.error('Falha na geração de modelo 3D:', erro);
+        if (statusTexto) statusTexto.textContent = erro instanceof Error ? erro.message : 'Falha na geração do modelo 3D.';
+    } finally {
+        if (botao) botao.disabled = false;
     }
 }
 
 async function processarGeracaoIAForm() {
     const prompt = document.getElementById('iaPrompt')?.value.trim();
-    const provedor = document.getElementById('iaProvedor')?.value || 'meshy';
-    const contato = document.getElementById('iaClienteContato')?.value.trim();
-
-    if (!prompt || !contato) {
-        alert("Por favor, preencha o prompt e o contato do cliente.");
+    const provedor = document.getElementById('iaProvedor')?.value;
+    if (!prompt || prompt.length > 800) {
+        alert("Informe uma descrição de até 800 caracteres.");
         return;
     }
-
-    await dispararGeracaoIA(prompt, provedor, contato);
-}
-
-function lancarModoSimulador(statusDiv, linkVisual, provedor) {
-    const linkSimulado = `https://adorepersonalite.com/aprovacao?token=token_${Date.now()}`;
-    if (statusDiv) {
-        const pTag = statusDiv.querySelector('p');
-        if (pTag) pTag.innerHTML = `<strong>Status:</strong> Pedido processado com sucesso (${provedor.toUpperCase()}).`;
+    if (provedor !== 'meshy') {
+        alert("Este servidor está configurado para o provedor Meshy.");
+        return;
     }
-    if (linkVisual) {
-        linkVisual.innerText = "Abrir Link de Aprovação do Cliente";
-        linkVisual.href = linkSimulado;
-    }
-    alert('Modelo 3D gerado com sucesso na Oficina Adorê!');
-
-    // Salva automaticamente nos ativos recentes se a persistência estiver ativa
-    if (typeof salvarAtivoNaNuvem === 'function') {
-        salvarAtivoNaNuvem('Modelo IA Estúdio', '3D Model', 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=200&q=80');
-    }
-}
-
-function atualizarInterfaceSucesso(statusDiv, linkVisual, contato, linkAprovacao) {
-    if (statusDiv) {
-        const pTag = statusDiv.querySelector('p');
-        if (pTag) pTag.innerHTML = `<strong>Status:</strong> Modelo gerado com sucesso! Aguardando aprovação de ${contato}.`;
-    }
-    if (linkVisual) {
-        linkVisual.innerText = "Abrir Link de Aprovação do Cliente";
-        linkVisual.href = linkAprovacao || `https://adorepersonalite.com/aprovacao?token=token_${Date.now()}`;
-    }
+    await dispararGeracaoIA(prompt);
 }
 
 window.simularAprovacaoCliente = function(idPedido) {

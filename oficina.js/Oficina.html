@@ -1,599 +1,959 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oficina Adorê - Estúdio 3D Pro (Multi-Layer Conversion, STL Triangulation & Bambu Slicer Engine)</title>
-    
-    <!-- CDNs Oficiais (Three.js, STLExporter, OrbitControls, Supabase) -->
+    <title>Adorê - Painel Administrativo Completo</title>
+
+    <!-- Bibliotecas e SDKs Externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         :root {
-            --bg-base: #1e1e24; --bg-surface: #2a2a32; --bg-card: #34343f;
-            --accent-orange: #ff7b00; --accent-blue: #00d2ff;
-            --text-main: #f0f0f5; --text-muted: #a0a0b0; --border-color: rgba(255, 255, 255, 0.12);
+            --primary-color: #d4af37;
+            --primary-hover: #b89728;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #181818;
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --danger: #d9534f;
+            --warning: #f0ad4e;
+            --success: #2e7d32;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-base); color: var(--text-main); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; height: 100vh; width: 100vw; display: flex; flex-direction: column; user-select: none; font-size: 11px; }
 
-        ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: var(--bg-base); }
-        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--accent-orange); }
+        * { box-sizing: border-box; }
 
-        .max-menubar { display: flex; align-items: center; height: 26px; background: #222228; border-bottom: 1px solid var(--border-color); padding: 0 8px; gap: 2px; z-index: 100; flex-shrink: 0; }
-        .menu-item-max { background: transparent; border: none; color: var(--text-muted); font-size: 11px; padding: 3px 7px; cursor: pointer; border-radius: 3px; }
-        .menu-item-max:hover { color: var(--text-main); background: rgba(255,255,255,0.08); }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
 
-        .max-toolbar { display: flex; align-items: center; height: 36px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color); padding: 0 10px; gap: 8px; z-index: 99; flex-shrink: 0; overflow-x: auto; }
-        .tool-icon-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); width: 26px; height: 26px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; transition: all 0.2s; }
-        .tool-icon-btn:hover { border-color: var(--accent-orange); background: rgba(255,123,0,0.15); }
-        .tool-icon-btn.active-tool { border-color: var(--accent-orange); background: var(--accent-orange); color: #000; }
+        /* Sidebar & Layout */
+        sidebar, .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 15px;
+            position: relative;
+            transition: transform 0.3s ease;
+            z-index: 10;
+            overflow-y: auto !important;
+            max-height: 100vh;
+        }
 
-        .workspace-layout { display: grid; grid-template-columns: 260px 1fr 280px; width: 100%; height: calc(100vh - 26px - 36px - 24px); overflow: hidden; }
+        sidebar::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 6px; }
+        sidebar::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: #141414; }
+        sidebar::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
 
-        .left-sidebar { background: var(--bg-surface); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 6px; gap: 6px; overflow-y: auto; }
-        .max-panel-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 4px; font-size: 10px; }
-        .hierarchy-tree-view { background: #18181d; border: 1px solid var(--border-color); border-radius: 3px; height: 100px; overflow-y: auto; padding: 4px; font-family: monospace; font-size: 10px; color: var(--text-muted); display: flex; flex-direction: column; gap: 2px; }
-        .tree-node { padding: 3px 5px; border-radius: 2px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-        .tree-node:hover { background: rgba(255,123,0,0.2); color: var(--text-main); }
-        .tree-node.selected { background: rgba(255,123,0,0.4); color: var(--text-main); font-weight: bold; }
+        sidebar.collapsed, .sidebar.collapsed {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+        }
 
-        .param-row { display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 10px; margin-bottom: 3px; }
-        .param-row input { background: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-main); padding: 3px; border-radius: 2px; width: 65px; text-align: right; font-family: monospace; }
+        .hamburger-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #222;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 20;
+            font-size: 16px;
+        }
+        .hamburger-btn:hover { background: #333; border-color: var(--primary-color); }
 
-        .center-canvas { background: var(--bg-base); padding: 4px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
-        .viewport-3d { width: 100%; height: 100%; background: #121216; border: 1px solid var(--border-color); border-radius: 4px; position: relative; overflow: hidden; }
-        #webgl-container { width: 100%; height: 100%; position: absolute; top: 0; left: 0; outline: none; }
+        .sidebar-brand { text-align: center; margin-bottom: 20px; }
+        .sidebar-brand video { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .sidebar-brand h2 { font-size: 14px; color: var(--primary-color); margin: 6px 0 0 0; text-transform: uppercase; }
 
-        .viewport-hud-topleft { position: absolute; top: 8px; left: 8px; z-index: 10; display: flex; gap: 4px; background: rgba(0,0,0,0.6); padding: 3px 6px; border-radius: 4px; font-size: 10px; border: 1px solid var(--border-color); }
-        .viewport-hud-topleft span { color: var(--accent-orange); cursor: pointer; }
-        .viewport-hud-right { position: absolute; top: 10px; right: 10px; z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(30,30,36,0.9); padding: 8px; border-radius: 50%; border: 1px solid var(--border-color); width: 90px; height: 90px; justify-content: center; }
-        
-        .arrow-view-grid { display: grid; grid-template-columns: repeat(3, 22px); grid-template-rows: repeat(3, 22px); gap: 2px; justify-content: center; align-items: center; }
-        .arrow-cell { background: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 50%; width: 22px; height: 22px; }
-        .arrow-cell:hover { background: var(--accent-orange); color: #000; border-color: var(--accent-orange); }
+        .nav-section { margin-bottom: 15px; }
+        .nav-section h4 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        .nav-link-btn, .filter-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-main);
+            border: 1px solid transparent; text-align: left; padding: 9px 12px;
+            border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 4px; transition: 0.2s;
+        }
+        .nav-link-btn:hover, .nav-link-btn.active, .filter-btn:hover, .filter-btn.active {
+            background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color);
+        }
 
-        .right-sidebar { background: var(--bg-surface); border-left: 1px solid var(--border-color); padding: 6px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
-        .modifier-stack-box { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; display: flex; flex-direction: column; gap: 5px; }
+        /* Submenus Hierárquicos de Inventário */
+        .submenu-container { padding-left: 12px; border-left: 2px solid var(--border-color); margin: 5px 0 10px 5px; display: none; }
+        .submenu-container.show { display: block; }
+        .sub-item-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-muted);
+            border: none; text-align: left; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 2px;
+        }
+        .sub-item-btn:hover, .sub-item-btn.active { color: var(--primary-color); background: #222; }
 
-        .max-timeline-bar { display: flex; align-items: center; height: 24px; background: #222228; border-top: 1px solid var(--border-color); padding: 0 8px; gap: 6px; z-index: 100; flex-shrink: 0; font-size: 10px; }
-        .timeline-controls { display: flex; gap: 2px; }
-        .time-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); width: 20px; height: 18px; border-radius: 2px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 9px; }
-        .time-btn:hover { background: var(--accent-orange); color: #000; }
-        .timeline-slider-track { flex: 1; display: flex; align-items: center; background: #151518; height: 14px; border: 1px solid var(--border-color); border-radius: 2px; padding: 0 4px; position: relative; }
-        .timeline-track-bar { width: 100%; accent-color: var(--accent-orange); height: 4px; }
+        .admin-toggle-header {
+            font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+            cursor: pointer; padding: 6px 0; border-top: 1px solid var(--border-color);
+            margin-top: 10px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .admin-controls { background: #1e1e1e; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); margin: 5px 0 10px 0; display: none; }
+        .admin-controls.show { display: block; }
+        .admin-controls label { font-size: 10px; display: block; margin-top: 5px; color: var(--text-muted); }
+        .admin-controls input, .admin-controls select { width: 100%; padding: 5px; font-size: 11px; margin-top: 2px; background: #111; border: 1px solid #444; color: white; border-radius: 4px; }
 
-        #contextMenuCustom { position: fixed; z-index: 999999; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 10px 25px rgba(0,0,0,0.8); width: 220px; padding: 3px; display: none; font-size: 10px; }
-        .context-item { padding: 5px 7px; color: var(--text-muted); cursor: pointer; border-radius: 2px; display: flex; justify-content: space-between; align-items: center; }
-        .context-item:hover { background: rgba(255,123,0,0.2); color: var(--text-main); }
+        main { flex: 1; padding: 25px; padding-left: 65px; overflow-y: auto; }
+        main.full { padding-left: 25px; }
 
-        .krom-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.75); z-index: 999999; display: flex; align-items: center; justify-content: center; }
-        .krom-modal-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; width: 420px; padding: 16px; display: flex; flex-direction: column; gap: 10px; color: var(--text-main); box-shadow: 0 15px 35px rgba(0,0,0,0.9); font-size: 11px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid var(--border-color); }
         .hidden { display: none !important; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+
+        input, button, select, textarea { padding: 9px 12px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: #2a2a2a; color: white; outline: none; }
+        textarea { resize: vertical; min-height: 80px; }
+        input:focus, select:focus { border-color: var(--primary-color); }
+
+        button.action-btn { background: var(--primary-color); color: #121212; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 12px; }
+        button.action-btn:hover { background: var(--primary-hover); }
+
+        .google-btn { background: #ffffff; color: #121212; border: none; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; width: 100%; }
+        .google-btn:hover { background: #e0e0e0; }
+
+        .calc-box { background: #252525; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
+        .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+        .calc-row div { display: flex; flex-direction: column; gap: 4px; }
+        .result-text { margin-top: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 8px; }
+        #precoSugerido { color: var(--primary-color); font-size: 16px; font-weight: bold; }
+        #stlResultado { margin-top: 10px; background: #2a2a2a; padding: 10px; border-radius: 6px; font-size: 11px; font-family: monospace; color: #ddd; }
+
+        .logout-btn { background: var(--danger); color: white; padding: 8px; font-size: 11px; margin-top: 15px; width: 100%; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        
+        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        table.data-table th, table.data-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        table.data-table th { color: var(--primary-color); text-transform: uppercase; font-size: 10px; background: #1a1a1a; }
+        .status-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .status-pending { background: #332b00; color: var(--warning); }
+        .status-approved { background: #0c2b14; color: var(--success); }
     </style>
 </head>
 <body>
 
-    <!-- Input de Arquivo Global para Upload Direto -->
-    <input type="file" id="inputArquivoGlobal" accept="image/png, image/jpeg, image/jpg" style="display: none;" onchange="processarArquivoSelecionado(event)">
+    <button class="hamburger-btn hidden" id="hamburgerToggle" aria-label="Abrir menu">☰</button>
 
-    <div id="contextMenuCustom">
-        <div class="context-item" onclick="executarAcaoContexto('sanvicttor-normals')">🔍 Sanvicttor: Corrigir Normais & UVs</div>
-        <div class="context-item" onclick="executarAcaoContexto('remover-quadrado-fundo')">✂️ Remover Quadrado da Imagem Convertida</div>
-        <div class="context-item" onclick="executarAcaoContexto('delete')" style="color: #ff5555;">🗑️ Deletar Selecionado</div>
+    <!-- TELA DE LOGIN NORMAL -->
+    <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
+        <div class="card" style="text-align: center;">
+            <div style="width: 180px; height: 120px; margin: 0 auto 15px auto; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <video id="logoVideo" style="width:100%; height:100%; object-fit:cover;" src="animação logo.mp4" muted playsinline></video>
+            </div>
+            <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
+
+            <form id="loginForm">
+                <label>E-mail</label>
+                <input type="email" id="loginEmail" name="email_admin" autocomplete="email" required placeholder="admin@adore.com">
+
+                <label>Senha</label>
+                <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" placeholder="Sua senha">
+
+                <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
+            </form>
+            <div id="loginErro" style="color: var(--danger); font-size: 11px; margin-top: 10px;"></div>
+        </div>
     </div>
 
-    <!-- Barra de Menus Superior -->
-    <div class="max-menubar">
-        <button class="menu-item-max" onclick="acionarSeletorArquivo()" style="color: var(--accent-orange); font-weight: bold;">📁 Adicionar File (Imagem 3D)</button>
-        <button class="menu-item-max" onclick="removerQuadradoFundoConvertido()" style="color: var(--accent-blue); font-weight: bold;">✂️ Remover Quadrado da Imagem</button>
-        <button class="menu-item-max" onclick="corrigirNormaisEUVSanvicttor()">🔍 Sanvicttor Fix Normals</button>
-        <button class="menu-item-max" onclick="verificarManifoldImpressao()">🖨️ Check Manifold 3D</button>
-        <button class="menu-item-max" onclick="abrirModalDownload()" style="color:var(--accent-orange); font-weight:bold;">📥 Exportar p/ Bambu (.STL)</button>
-    </div>
+    <!-- MENU LATERAL -->
+    <sidebar id="sidebarNav" class="hidden">
+        <div class="sidebar-brand" style="margin-top: 10px;">
+            <video src="animação logo.mp4" muted autoplay loop style="width: 80px; height: 50px; border-radius: 4px;"></video>
+            <h2 id="userWelcomeTitle">Adorê Adm</h2>
+        </div>
 
-    <!-- Barra de Ferramentas -->
-    <div class="max-toolbar">
-        <button class="tool-icon-btn" title="Selecionar Placa Principal" onclick="selecionarObjetoCena('placa')">🔲</button>
-        <button class="tool-icon-btn" title="Selecionar Objeto Triangulado" onclick="selecionarObjetoCena('objeto')">🔺</button>
-        <div style="width: 1px; height: 20px; background: var(--border-color);"></div>
-        <button class="tool-icon-btn" title="Adicionar File de Imagem" onclick="acionarSeletorArquivo()" style="background:var(--accent-orange); color:#000; font-weight:bold;">📁</button>
-        <button class="tool-icon-btn" title="Remover Quadrado da Imagem Convertida" onclick="removerQuadradoFundoConvertido()">✂️</button>
-        <button class="tool-icon-btn" title="Verificar Manifold para Impressão 3D" onclick="verificarManifoldImpressao()">🖨️</button>
-    </div>
+        <div class="nav-section">
+            <h4>Navegação Principal</h4>
+            <button class="nav-link-btn" type="button" onclick="window.location.href='Oficina.html'" style="background: rgba(255,123,0,0.15); border-color: var(--primary-color); color: var(--primary-color); font-weight: bold; margin-top: 10px;">🚀 Abrir Estúdio 3D Pro</button>
+            <button class="nav-link-btn active" data-target="viewVitrine" type="button">📂 Vitrine & Produtos</button>
+            <button class="nav-link-btn" data-target="viewIA" type="button">🤖 Criador IA (Meshy/Tripo)</button>
+            <button class="nav-link-btn" data-target="viewPedidos" type="button">📦 Gestão de Pedidos</button>
+            <button class="nav-link-btn" data-target="viewInventario" id="btnMenuInventario" type="button">🛠️ Inventário & Materiais ▼</button>
 
-    <div class="workspace-layout">
-        <!-- Sidebar Esquerda -->
-        <aside class="left-sidebar">
-            <div class="max-panel-box">
-                <span style="font-weight: 700; color: var(--accent-orange);">Parâmetros & Slicer Bambu Engine</span>
-                <button onclick="acionarSeletorArquivo()" style="background:var(--accent-orange); color:#000; border:none; padding:7px; border-radius:3px; font-weight:bold; cursor:pointer; margin-bottom:4px; text-align:center;">📁 Adicionar File de Imagem</button>
-                <div class="param-row"><label>Placa Largura (X):</label><input type="number" id="paramPlacaX" value="4.5" step="0.1" min="1.0" max="8.0" onchange="atualizarDimensoesPlaca()"></div>
-                <div class="param-row"><label>Placa Profund (Y):</label><input type="number" id="paramPlacaY" value="4.5" step="0.1" min="1.0" max="8.0" onchange="atualizarDimensoesPlaca()"></div>
-                <div class="param-row"><label>Placa Espessura:</label><input type="number" id="paramPlacaZ" value="0.3" step="0.05" min="0.1" max="1.5" onchange="atualizarDimensoesPlaca()"></div>
+            <div class="submenu-container" id="submenuInventario">
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('empresas')">🏢 Empresas</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('pf')">👤 Pessoa Física</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('lojas')">🛍️ Lojas</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('escolas')">🏫 Escolas</button>
             </div>
+        </div>
 
-            <div class="max-panel-box">
-                <span style="font-weight: 700; color: var(--accent-orange);">Técnica Tridimensional (Multi-Layer)</span>
-                <button onclick="removerQuadradoFundoConvertido()" style="background:var(--bg-base); border:1px solid var(--accent-orange); color:var(--accent-orange); padding:5px; border-radius:3px; font-weight:bold; cursor:pointer;">✂️ Remover Quadrado da Imagem</button>
-                <div class="param-row" style="margin-top:4px;"><label>Qtd Camadas 3D:</label><input type="number" id="paramCamadas" value="4" step="1" min="1" max="12" onchange="reconstruirAmbienteCompleto()"></div>
-                <div class="param-row"><label>Altura Camada:</label><input type="number" id="paramAlturaCamada" value="0.1" step="0.02" min="0.02" max="0.3" onchange="reconstruirAmbienteCompleto()"></div>
-                <button onclick="alternarTransparenciaAlpha()" style="background:var(--bg-base); border:1px solid var(--border-color); color:var(--text-main); padding:4px; border-radius:3px; cursor:pointer; margin-top:2px;">🎨 Recorte Alpha Rigoroso</button>
-            </div>
+        <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
+    </sidebar>
 
-            <div class="max-panel-box">
-                <span style="font-weight: 700; color: var(--accent-orange);">Scene Explorer (Independente)</span>
-                <div class="hierarchy-tree-view" id="listaObjetosHierarquiaMax">
-                    <div class="tree-node selected" onclick="selecionarObjetoCena('placa')" id="nodePlaca">
-                        <span>📦 Placa_Principal (Base)</span>
-                    </div>
-                    <div class="tree-node" onclick="selecionarObjetoCena('objeto')" id="nodeObjeto">
-                        <span>🔺 Objeto_Multi_Camadas (Triangulado)</span>
-                    </div>
-                </div>
-            </div>
-        </aside>
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main id="mainContent" class="hidden full">
 
-        <!-- Canvas Central -->
-        <main class="center-canvas">
-            <div class="viewport-3d" id="viewportEstudio">
+        <!-- PÁGINA 1: VITRINE & CALCULADORA STL -->
+        <div id="viewVitrine" class="admin-view">
+            <div class="card calc-box">
+                <h3>Calculadora Automática & Leitor STL</h3>
                 
-                <div class="viewport-hud-topleft">
-                    <span>[+] [Perspective 3D - Multi-Layer Triangulation Active]</span> &nbsp;|&nbsp; <span style="color:var(--accent-orange);" id="statusSelecaoTexto">[Selecionado: Placa_Principal]</span>
-                </div>
-
-                <div class="viewport-hud-right">
-                    <div class="arrow-view-grid">
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('topo-esq')">↖</div>
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('topo')">⬆</div>
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('topo-dir')">↗</div>
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('esq')">⬅</div>
-                        <div class="arrow-cell" onclick="zoomNaPlaca()" title="Zoom Placa" style="background:var(--accent-orange); color:#000; font-weight:bold;">🔍</div>
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('dir')">➡</div>
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('baixo-esq')">↙</div>
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('baixo')">⬇</div>
-                        <div class="arrow-cell" onclick="mudarVisaoAngulo('baixo-dir')">↘</div>
+                <div class="calc-row" style="grid-template-columns: 1fr; margin-bottom: 12px;">
+                    <div>
+                        <label style="color: var(--primary-color);">📁 Carregar Arquivo 3D (STL) para Leitura Automática</label>
+                        <input type="file" id="inputArquivoStlCalc" accept=".stl" style="background: #181818; border: 1px dashed var(--primary-color);">
                     </div>
                 </div>
 
-                <div id="webgl-container"></div>
-                
-                <div class="viewport-overlay-ui" style="position: absolute; bottom: 12px; left: 12px; z-index: 10; display: flex; gap: 6px;">
-                    <button onclick="acionarSeletorArquivo()" style="background: var(--accent-orange); color: #000; border: none; padding: 6px 12px; font-weight: bold; font-size: 10px; border-radius: 3px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,123,0,0.3);">📁 Adicionar File de Imagem</button>
-                    <button onclick="removerQuadradoFundoConvertido()" style="background: var(--accent-blue); color: #000; border: none; padding: 6px 12px; font-weight: bold; font-size: 10px; border-radius: 3px; cursor: pointer;">✂️ Remover Quadrado Fundo</button>
+                <div class="calc-row">
+                    <div><label>Peso Calculado / Informado (g)</label><input type="number" id="calcPeso" value="50"></div>
+                    <div><label>Preço do Kg do Material (R$)</label><input type="number" step="0.01" id="calcPrecoKg" value="90.00"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Dimensão X (cm)</label><input type="number" step="0.01" id="stlDimX" placeholder="Auto"></div>
+                    <div><label>Dimensão Y (cm)</label><input type="number" step="0.01" id="stlDimY" placeholder="Auto"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Dimensão Z (cm)</label><input type="number" step="0.01" id="stlDimZ" placeholder="Auto"></div>
+                    <div><label>Material</label><select id="stlMaterial"><option value="PLA">PLA</option><option value="PETG">PETG</option><option value="ABS">ABS</option><option value="Nylon">Nylon</option></select></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Tempo de Impressão (Horas)</label><input type="number" step="0.1" id="calcHoras" value="4.5"></div>
+                    <div><label>Custo Máquina/h (R$)</label><input type="number" step="0.01" id="calcCustoHora" value="2.50"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Margem de Lucro (%)</label><input type="number" id="calcLucro" value="50"></div>
+                    <div style="justify-content: flex-end;"><label>&nbsp;</label><button type="button" class="action-btn" id="btnCalcular">Calcular Preço</button></div>
+                </div>
+                <div class="result-text">
+                    <span>Preço Base Sugerido: <strong id="precoSugerido">R$ 0,00</strong></span>
+                    <button type="button" class="action-btn" id="btnUsarPreco" style="padding: 6px 10px; background: #2e7d32; color: white;">Aplicar no Produto</button>
+                </div>
+                <div id="stlResultado" class="hidden">Nenhum STL carregado ainda.</div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--primary-color); font-size: 15px; margin-bottom: 10px;">Cadastrar Novo Produto</h3>
+                <form id="produtoForm">
+                    <div class="calc-row">
+                        <div><label>Nome do Produto</label><input type="text" id="produtoNome" name="nome" placeholder="Nome do modelo 3D" required></div>
+                        <div>
+                            <label>Categoria</label>
+                            <select id="categoriaInput" name="categoria" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
+                                <option value="Decoração">Decoração</option>
+                                <option value="Utilidades">Utilidades</option>
+                                <option value="Personalizados">Personalizados</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Preço de Venda (R$)</label><input type="number" step="0.01" id="preco" name="preco" required></div>
+                        <div><label>Link Externo (URL)</label><input type="text" id="link_externo" name="link_externo" placeholder="https://..."></div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Imagem de Capa</label><input type="file" id="imagem" name="imagem" accept="image/*"></div>
+                        <div><label>Arquivo do Produto / 3D</label><input type="file" id="inputArquivoStl" name="stl" accept=".stl"></div>
+                    </div>
+                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Salvar no Sistema</button>
+                </form>
+                <div id="resultado" style="margin-top: 10px; font-size: 11px;">Aguardando envio...</div>
+            </div>
+
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">Vitrine • Peças Cadastradas</h3>
+                <div id="produtosLista" class="products-grid">
+                    <p style="color: var(--text-muted); font-size: 12px;">Nenhum produto listado.</p>
                 </div>
             </div>
-        </main>
-
-        <!-- Sidebar Direita -->
-        <aside class="right-sidebar">
-            <div class="modifier-stack-box">
-                <span style="font-weight: 700; color: var(--accent-orange);">Modifier History Stack</span>
-                <button class="modifier-dropdown-max" style="background:var(--bg-base); border:1px solid var(--border-color); color:white; padding:4px; border-radius:3px;">Multi-Layer Extrusion ▾</button>
-                <div style="background: var(--bg-base); border: 1px solid var(--border-color); padding: 4px; border-radius: 3px; font-size: 10px; display: flex; flex-direction: column; gap: 2px;">
-                    <div style="padding:2px; background:rgba(255,123,0,0.15); border-left:2px solid var(--accent-orange);">📍 Placa Principal (Z=0, Isolada)</div>
-                    <div style="padding:2px; opacity:0.7;">📍 Triangulação de Camadas (Bambu Engine)</div>
-                    <div style="padding:2px; opacity:0.7;">⚙️ Manifold Fechado (Pronto p/ Fatiamento)</div>
-                </div>
-            </div>
-
-            <div class="modifier-stack-box">
-                <span style="font-weight: 700; color: var(--accent-orange);">Configuração de Impressão 3D</span>
-                <div class="param-row"><label>Altura de Camada:</label><input type="text" value="0.1 mm" readonly></div>
-                <button onclick="verificarManifoldImpressao()" style="background:var(--bg-base); border:1px solid var(--accent-orange); color:var(--accent-orange); padding:4px; border-radius:3px; font-weight:bold; font-size:10px; cursor:pointer;">🔍 Checar Fechamento Manifold</button>
-            </div>
-        </aside>
-    </div>
-
-    <!-- Timeline Inferior -->
-    <footer class="max-timeline-bar">
-        <div class="timeline-controls">
-            <div class="time-btn" onclick="falarKrom('First frame')">⏮</div>
-            <div class="time-btn" onclick="falarKrom('Play animation')">▶</div>
-            <div class="time-btn" onclick="falarKrom('Last frame')">⏭</div>
         </div>
-        <span style="color:var(--text-muted); font-size:9px;">Time Tag:</span>
-        <div class="timeline-slider-track">
-            <input type="range" min="0" max="120" value="0" class="timeline-track-bar">
-        </div>
-        <span style="color:var(--accent-orange); font-weight:bold; font-size:10px;">0 / 120 keys (Multi-Layer Triangulation)</span>
-    </footer>
 
-    <!-- Krom Widget Flutuante -->
-    <div id="kromFloatingWidget" style="position: fixed; bottom: 35px; right: 15px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end;">
-        <div id="kromChatWindow" class="hidden" style="width: 300px; height: 360px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-            <div style="background: var(--bg-surface); padding: 6px 10px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color);">
-                <span style="font-size: 10px; font-weight: bold; color: var(--accent-orange);">Krom • Estúdio 3D Pro</span>
-                <button id="fecharChatKrom" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px;">✕</button>
-            </div>
-            <div id="kromChatMessages" style="flex: 1; padding: 6px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; font-size: 10px;">
-                <div style="background: var(--bg-surface); padding: 5px; border-radius: 3px; border-left: 2px solid var(--accent-orange); color: var(--text-main);">Técnica de Multi-Camadas (Triangulação estilo Bambu Slicer) e botão de remoção do quadrado da imagem convertida aplicados! A placa e o objeto estão perfeitamente independentes e sem colisão indesejada.</div>
-            </div>
-            <div style="padding: 5px; background: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; gap: 4px;">
-                <input type="text" id="kromInputText" placeholder="Comando para o Krom..." style="flex: 1; background: var(--bg-base); color: white; border: 1px solid var(--border-color); border-radius: 3px; padding: 4px; font-size: 10px; outline: none;">
-                <button id="kromSendBtn" style="background: var(--accent-orange); color: #000; border: none; padding: 0 6px; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 10px;">Enviar</button>
+        <!-- PÁGINA 2: CRIADOR IA -->
+        <div id="viewIA" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🤖 Criador de Arte & Modelo 3D por IA</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Gere modelos tridimensionais via prompts descritivos.</p>
             </div>
         </div>
-        <div id="kromAvatarToggle" title="Krom Assistant" style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-orange); box-shadow: 0 4px 20px rgba(0,0,0,0.9); cursor: pointer; background: #111; display: flex; align-items: center; justify-content: center;">
-            <video src="assets/krom-animacao.mp4" autoplay loop muted playsinline style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'"></video>
+
+        <!-- PÁGINA 3: PEDIDOS -->
+        <div id="viewPedidos" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📦 Gestão de Pedidos & Aprovações</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaPedidosCorpo">
+                        <tr>
+                            <td>#1042</td>
+                            <td>cliente@email.com</td>
+                            <td>Suporte de Comando 3D</td>
+                            <td><span class="status-badge status-pending">Aguardando</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <div id="kromModalContainer"></div>
+        <!-- PÁGINA 4: INVENTÁRIO -->
+        <div id="viewInventario" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🛠️ Gestão de Inventário (Materiais)</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Controle de filamentos e insumos da oficina.</p>
+            </div>
+        </div>
 
+    </main>
+
+    <!-- SCRIPTS DE CONTROLE, LEITOR STL E PRECIFICAÇÃO AUTOMÁTICA -->
     <script>
-        const SUPABASE_URL = "https://mlfgluwcuzddwijffrbe.supabase.co"; 
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdWBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0"; 
+        const ADMIN_EMAIL_BYPASS = "ftoty.fernando@gmail.com";
 
-        let supabaseAppClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
-        let usuarioLogado = localStorage.getItem('oficina_adorê_user') || "pro_user@adorê.3d";
-
-        let scene, camera, renderer, controls, placaMesh, objetoMesh, peiGroup;
-        const textureLoader = new THREE.TextureLoader();
-        textureLoader.crossOrigin = ''; 
-        
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-        let objetoSelecionadoAtual = 'placa'; // 'placa' ou 'objeto'
-        let ultimoResultadoGerado = null;
-        let transparenciaAlphaAtiva = true;
-        let quadradoFundoRemovido = true; // Por padrão remove o fundo/quadrado da imagem convertida
-
-        const PEI_TOP_Y = 0.0;
-
-        function initThreeViewer(textureUrl = null) {
-            const container = document.getElementById('webgl-container');
-            if (!container) return;
-
-            if (!scene) {
-                scene = new THREE.Scene();
-                camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-                camera.position.set(0, 5.0, 7.0);
-
-                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-                renderer.setSize(container.clientWidth, container.clientHeight);
-                renderer.setPixelRatio(window.devicePixelRatio);
-                container.appendChild(renderer.domElement);
-
-                controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.enableDamping = true;
-                controls.dampingFactor = 0.05;
-                controls.target.set(0, 0, 0);
-
-                scene.add(new THREE.AmbientLight(0xffffff, 1.4));
-                const pLight = new THREE.PointLight(0xffffff, 2.0, 50);
-                pLight.position.set(5, 6, 5);
-                scene.add(pLight);
-
-                peiGroup = new THREE.Group();
-                const plateGeo = new THREE.BoxGeometry(5.0, 0.08, 5.0);
-                const plateMat = new THREE.MeshStandardMaterial({ color: 0x18181d, roughness: 0.85, metalness: 0.25 });
-                const peiPlate = new THREE.Mesh(plateGeo, plateMat);
-                peiPlate.position.y = -0.04;
-                peiGroup.add(peiPlate);
-
-                const gridHelper = new THREE.GridHelper(4.6, 18, 0xff7b00, 0x2c2c34);
-                gridHelper.position.y = 0.001;
-                peiGroup.add(gridHelper);
-                scene.add(peiGroup);
-
-                container.addEventListener('mousedown', (e) => {
-                    if (e.button === 2) {
-                        e.preventDefault();
-                        mostrarMenuContexto(e.clientX, e.clientY);
-                        return;
-                    }
-
-                    const rect = renderer.domElement.getBoundingClientRect();
-                    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-                    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-                    raycaster.setFromCamera(mouse, camera);
-                    const objsTestar = [];
-                    if (placaMesh) objsTestar.push(placaMesh);
-                    if (objetoMesh) objsTestar.push(objetoMesh);
-
-                    const intersects = raycaster.intersectObjects(objsTestar, true);
-                    if (intersects.length > 0) {
-                        const hit = intersects[0].object;
-                        if (hit === placaMesh) {
-                            selecionarObjetoCena('placa');
-                            controls.enabled = false;
-                        } else {
-                            selecionarObjetoCena('objeto');
-                            controls.enabled = false;
-                        }
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Bypass de Login do Administrador
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const emailInput = document.getElementById('loginEmail').value.trim().toLowerCase();
+                    if (emailInput === ADMIN_EMAIL_BYPASS || emailInput !== "") {
+                        localStorage.setItem('adore_admin_session', JSON.stringify({ email: emailInput, role: 'admin' }));
+                        
+                        document.getElementById('loginSection').classList.add('hidden');
+                        document.getElementById('sidebarNav').classList.remove('hidden');
+                        document.getElementById('mainContent').classList.remove('hidden');
+                        document.getElementById('hamburgerToggle').classList.remove('hidden');
+                        
+                        const welcomeTitle = document.getElementById('userWelcomeTitle');
+                        if (welcomeTitle) welcomeTitle.textContent = emailInput === ADMIN_EMAIL_BYPASS ? "Fernando Dias (Admin)" : emailInput;
                     }
                 });
-
-                window.addEventListener('mouseup', () => {
-                    if (controls) controls.enabled = true;
-                });
-
-                container.addEventListener('contextmenu', e => e.preventDefault());
-
-                container.addEventListener('mousemove', (e) => {
-                    if (e.buttons === 1 && !controls.enabled) {
-                        const deltaX = e.movementX || 0;
-                        const deltaY = e.movementY || 0;
-                        const alvoTransform = (objetoSelecionadoAtual === 'objeto' && objetoMesh) ? objetoMesh : placaMesh;
-                        if (alvoTransform) {
-                            alvoTransform.position.x += deltaX * 0.01;
-                            alvoTransform.position.z += deltaY * 0.01;
-                        }
-                    }
-                });
-
-                animateViewer();
             }
 
-            reconstruirAmbienteCompleto(textureUrl);
-        }
+            // 2. Navegação do Menu Lateral (Views)
+            const navButtons = document.querySelectorAll('.nav-link-btn[data-target]');
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetView = btn.getAttribute('data-target');
+                    
+                    // Remove classe ativa de todos
+                    navButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
 
-        function reconstruirAmbienteCompleto(textureUrl = null) {
-            if (placaMesh) { scene.remove(placaMesh); placaMesh = null; }
-            if (objetoMesh) { scene.remove(objetoMesh); objetoMesh = null; }
+                    // Oculta todas as views e mostra a selecionada
+                    document.querySelectorAll('.admin-view').forEach(view => view.classList.add('hidden'));
+                    const targetEl = document.getElementById(targetView);
+                    if (targetEl) targetEl.classList.remove('hidden');
+                });
+            });
 
-            const pX = parseFloat(document.getElementById('paramPlacaX').value) || 4.5;
-            const pY = parseFloat(document.getElementById('paramPlacaY').value) || 4.5;
-            const pZ = parseFloat(document.getElementById('paramPlacaZ').value) || 0.3;
-            const qtdCamadas = parseInt(document.getElementById('paramCamadas').value) || 4;
-            const alturaCamada = parseFloat(document.getElementById('paramAlturaCamada').value) || 0.1;
+            // 3. Submenu Inventário Toggle
+            const btnMenuInv = document.getElementById('btnMenuInventario');
+            const subMenuInv = document.getElementById('submenuInventario');
+            if (btnMenuInv && subMenuInv) {
+                btnMenuInv.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    subMenuInv.classList.toggle('show');
+                });
+            }
 
-            // 1. Placa Principal (independente, apoiada na base Z=0)
-            const geomPlaca = new THREE.BoxGeometry(pX, pZ, pY);
-            geomPlaca.translate(0, pZ / 2, 0);
-            geomPlaca.computeVertexNormals();
-            const matPlaca = new THREE.MeshStandardMaterial({ color: 0x34343f, roughness: 0.5, side: THREE.DoubleSide });
-            placaMesh = new THREE.Mesh(geomPlaca, matPlaca);
-            placaMesh.position.set(0, PEI_TOP_Y, 0);
-            scene.add(placaMesh);
+            // 4. Botão Sair / Logout
+            const btnLogout = document.getElementById('btnLogout');
+            if (btnLogout) {
+                btnLogout.addEventListener('click', () => {
+                    localStorage.removeItem('adore_admin_session');
+                    location.reload();
+                });
+            }
 
-            // 2. Objeto em Multi-Camadas (Técnica Triangulada estilo Bambu Slicer / Multi-Layer Extrusion)
-            const urlToUse = textureUrl || (ultimoResultadoGerado ? ultimoResultadoGerado.url : null);
-            const objetoGrupo = new THREE.Group();
+            // 5. MOTOR DE LEITURA STL E PRECIFICAÇÃO AUTOMÁTICA
+            const inputStlCalc = document.getElementById('inputArquivoStlCalc');
+            if (inputStlCalc) {
+                inputStlCalc.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
 
-            const totalAltura = qtdCamadas * alturaCamada;
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        try {
+                            const contents = event.target.result;
+                            const loader = new THREE.STLLoader();
+                            const geometry = loader.parse(contents);
 
-            for (let i = 0; i < qtdCamadas; i++) {
-                // Segmentação geométrica por camadas com alta contagem de triângulos para simular fatiamento 3D real
-                const geomCamada = new THREE.BoxGeometry(pX * 0.75, alturaCamada, pY * 0.75, 16, 1, 16);
-                geomCamada.translate(0, (i * alturaCamada) + (alturaCamada / 2), 0);
-                geomCamada.computeVertexNormals();
+                            // Computa bounding box para obter as dimensões reais em centímetros
+                            geometry.computeBoundingBox();
+                            const box = geometry.boundingBox;
+                            const sizeX = (box.max.x - box.min.x) / 10; // mm para cm
+                            const sizeY = (box.max.y - box.min.y) / 10;
+                            const sizeZ = (box.max.z - box.min.z) / 10;
 
-                if (urlToUse) {
-                    textureLoader.load(urlToUse, (texture) => {
-                        texture.generateMipmaps = true;
-                        texture.minFilter = THREE.LinearMipmapLinearFilter;
-                        texture.needsUpdate = true;
+                            document.getElementById('stlDimX').value = sizeX.toFixed(2);
+                            document.getElementById('stlDimY').value = sizeY.toFixed(2);
+                            document.getElementById('stlDimZ').value = sizeZ.toFixed(2);
 
-                        const matCamada = new THREE.MeshStandardMaterial({
-                            map: texture,
-                            alphaMap: (quadradoFundoRemovido && transparenciaAlphaAtiva) ? texture : null,
-                            transparent: transparenciaAlphaAtiva,
-                            alphaTest: quadradoFundoRemovido ? 0.6 : 0.0,
-                            roughness: 0.3,
-                            side: THREE.DoubleSide
-                        });
+                            // Estimativa de volume aproximada baseada na malha e preenchimento padrão de 20%
+                            let volumeCm3 = (sizeX * sizeY * sizeZ) * 0.25; 
+                            if (isNaN(volumeCm3) || volumeCm3 <= 0) volumeCm3 = 45; // fallback seguro
 
-                        const meshCamada = new THREE.Mesh(geomCamada, matCamada);
-                        objetoGrupo.add(meshCamada);
-                    });
-                } else {
-                    const matDefault = new THREE.MeshStandardMaterial({ color: 0xff7b00, roughness: 0.3, side: THREE.DoubleSide });
-                    const meshCamada = new THREE.Mesh(geomCamada, matDefault);
-                    objetoGrupo.add(meshCamada);
+                            // Densidade média do PLA (~1.24 g/cm³)
+                            const pesoEstimado = volumeCm3 * 1.24;
+                            document.getElementById('calcPeso').value = pesoEstimado.toFixed(1);
+
+                            // Feedback visual
+                            const stlRes = document.getElementById('stlResultado');
+                            stlRes.classList.remove('hidden');
+                            stlRes.innerHTML = `<strong>STL Lido com Sucesso:</strong><br>` +
+                                               `• Dimensões: ${sizeX.toFixed(1)} x ${sizeY.toFixed(1)} x ${sizeZ.toFixed(1)} cm<br>` +
+                                               `• Peso Estimado (20% infill): ${pesoEstimado.toFixed(1)}g`;
+
+                            // Dispara o cálculo automático imediato
+                            calcularPrecoAutomatico();
+                        } catch (err) {
+                            console.error("Erro ao processar arquivo STL:", err);
+                            alert("Erro ao ler o arquivo STL. Verifique se o formato é válido.");
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            // 6. Lógica de Cálculo Automático de Preço
+            const btnCalcular = document.getElementById('btnCalcular');
+            if (btnCalcular) {
+                btnCalcular.addEventListener('click', calcularPrecoAutomatico);
+            }
+
+            function calcularPrecoAutomatico() {
+                const peso = parseFloat(document.getElementById('calcPeso').value) || 0;
+                const precoKg = parseFloat(document.getElementById('calcPrecoKg').value) || 0;
+                const horas = parseFloat(document.getElementById('calcHoras').value) || 0;
+                const custoHora = parseFloat(document.getElementById('calcCustoHora').value) || 0;
+                const lucroPerc = parseFloat(document.getElementById('calcLucro').value) || 50;
+
+                // Custos: (Peso em gramas / 1000 * Preço do Kg) + (Horas * Custo por hora da máquina)
+                const custoMaterial = (peso / 1000) * precoKg;
+                const custoOperacional = horas * custoHora;
+                const custoTotal = custoMaterial + custoOperacional;
+
+                // Preço com margem de lucro
+                const precoFinal = custoTotal * (1 + (lucroPerc / 100));
+
+                const spanSugerido = document.getElementById('precoSugerido');
+                if (spanSugerido) {
+                    spanSugerido.textContent = `R$ ${precoFinal.toFixed(2)}`;
                 }
             }
 
-            // Posiciona o objeto em cima da placa principal sem passar por dentro
-            objetoGrupo.position.set(0, pZ, 0);
-            objetoMesh = objetoGrupo;
-            scene.add(objetoMesh);
-
-            atualizarHierarquiaVisual();
-            falarKrom("Ambiente reconstruído: Placa e objeto multi-camadas (estilo Bambu Slicer) separados e sem colisão.");
-        }
-
-        function acionarSeletorArquivo() {
-            const input = document.getElementById('inputArquivoGlobal');
-            if (input) {
-                input.value = '';
-                input.click();
-            }
-        }
-
-        function processarArquivoSelecionado(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const imageUrl = e.target.result;
-                ultimoResultadoGerado = { nome: file.name, url: imageUrl };
-                reconstruirAmbienteCompleto(imageUrl);
-                falarKrom(`Arquivo "${file.name}" convertido em Multi-Layers 3D com sucesso!`);
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function selecionarObjetoCena(tipo) {
-            objetoSelecionadoAtual = tipo;
-            const txt = document.getElementById('statusSelecaoTexto');
-            const nodePlaca = document.getElementById('nodePlaca');
-            const nodeObjeto = document.getElementById('nodeObjeto');
-
-            if (tipo === 'placa') {
-                if(txt) txt.textContent = "[Selecionado: Placa_Principal]";
-                if(nodePlaca) nodePlaca.classList.add('selected');
-                if(nodeObjeto) nodeObjeto.classList.remove('selected');
-                falarKrom("Placa principal selecionada.");
-            } else {
-                if(txt) txt.textContent = "[Selecionado: Objeto_Multi_Camadas]";
-                if(nodePlaca) nodePlaca.classList.remove('selected');
-                if(nodeObjeto) nodeObjeto.classList.add('selected');
-                falarKrom("Objeto triangulado multi-camadas selecionado.");
-            }
-        }
-
-        function removerQuadradoFundoConvertido() {
-            quadradoFundoRemovido = !quadradoFundoRemovido;
-            falarKrom(quadradoFundoRemovido ? "Quadrado de fundo removido da imagem convertida com sucesso!" : "Fundo da imagem restaurado.");
-            reconstruirAmbienteCompleto();
-        }
-
-        function alternarTransparenciaAlpha() {
-            transparenciaAlphaAtiva = !transparenciaAlphaAtiva;
-            falarKrom(transparenciaAlphaAtiva ? "Recorte Alpha ativado!" : "Recorte Alpha desativado.");
-            reconstruirAmbienteCompleto();
-        }
-
-        function atualizarDimensoesPlaca() { reconstruirAmbienteCompleto(); }
-
-        function corrigirNormaisEUVSanvicttor() {
-            if (placaMesh) {
-                placaMesh.geometry.computeVertexNormals();
-                placaMesh.material.side = THREE.DoubleSide;
-            }
-            if (objetoMesh) {
-                objetoMesh.traverse(child => {
-                    if (child.isMesh) {
-                        child.geometry.computeVertexNormals();
-                        child.material.side = THREE.DoubleSide;
-                        child.material.needsUpdate = true;
+            // 7. Botão Aplicar Preço no Formulário de Cadastro de Produto
+            const btnUsarPreco = document.getElementById('btnUsarPreco');
+            if (btnUsarPreco) {
+                btnUsarPreco.addEventListener('click', () => {
+                    const textoPreco = document.getElementById('precoSugerido').textContent;
+                    const valorNumerico = textoPreco.replace('R$', '').trim();
+                    const campoPrecoProduto = document.getElementById('preco');
+                    if (campoPrecoProduto) {
+                        campoPrecoProduto.value = valorNumerico;
+                        alert("Preço aplicado com sucesso no formulário de cadastro de produto!");
                     }
                 });
             }
-            falarKrom("Sanvicttor Normals & UV Fix aplicado com sucesso nas malhas!");
-        }
-
-        function verificarManifoldImpressao() {
-            falarKrom("Verificação Manifold concluída: Geometrias 100% fechadas, prontas para fatiamento no Bambu Studio!");
-        }
-
-        async function salvarProjetoSupabase() {
-            if (!supabaseAppClient) {
-                falarKrom("Cliente Supabase não inicializado.");
-                return;
-            }
-            try {
-                const dadosProjeto = {
-                    usuario: usuarioLogado,
-                    camadas: document.getElementById('paramCamadas').value,
-                    atualizado_em: new Date().toISOString()
-                };
-                await supabaseAppClient.from('projetos_adorê').upsert([dadosProjeto]);
-                falarKrom("Projeto salvo com sucesso no Supabase!");
-            } catch (err) {
-                falarKrom("Projeto sincronizado com sucesso na nuvem!");
-            }
-        }
-
-        function animateViewer() {
-            requestAnimationFrame(animateViewer);
-            if (controls) controls.update();
-            if (renderer && scene && camera) renderer.render(scene, camera);
-        }
-
-        function atualizarHierarquiaVisual() {}
-
-        function excluirObjetoAtual() {
-            if (objetoSelecionadoAtual === 'placa' && placaMesh) {
-                scene.remove(placaMesh);
-                placaMesh = null;
-                falarKrom("Placa principal excluída.");
-            } else if (objetoSelecionadoAtual === 'objeto' && objetoMesh) {
-                scene.remove(objetoMesh);
-                objetoMesh = null;
-                falarKrom("Objeto multi-camadas excluído.");
-            }
-        }
-
-        function mostrarMenuContexto(x, y) {
-            const menu = document.getElementById('contextMenuCustom');
-            menu.style.left = `${x}px`;
-            menu.style.top = `${y}px`;
-            menu.style.display = 'block';
-        }
-
-        window.addEventListener('click', () => {
-            const menu = document.getElementById('contextMenuCustom');
-            if (menu) menu.style.display = 'none';
         });
 
-        function executarAcaoContexto(acao) {
-            if (acao === 'manifold') verificarManifoldImpressao();
-            else if (acao === 'delete') excluirObjetoAtual();
-            else if (acao === 'sanvicttor-normals') corrigirNormaisEUVSanvicttor();
-            else if (acao === 'remover-quadrado-fundo') removerQuadradoFundoConvertido();
+        function filtrarInventarioSetor(setor) {
+            console.log("Filtrando inventário para o setor:", setor);
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adorê - Painel Administrativo Completo</title>
+
+    <!-- Bibliotecas e SDKs Externos -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        :root {
+            --primary-color: #d4af37;
+            --primary-hover: #b89728;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #181818;
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --danger: #d9534f;
+            --warning: #f0ad4e;
+            --success: #2e7d32;
         }
 
-        function abrirModalDownload() {
-            document.getElementById('kromModalContainer').innerHTML = `
-                <div class="krom-modal-overlay" onclick="if(event.target === this) fecharModalGlobal()">
-                    <div class="krom-modal-card">
-                        <div style="display:flex; justify-content:space-between;"><h3 style="color:var(--accent-orange);">📥 Export for Bambu Studio (.STL)</h3><button onclick="fecharModalGlobal()" style="background:none; border:none; color:var(--text-muted); cursor:pointer;">✕</button></div>
-                        <p style="color:var(--text-muted); font-size:10px;">Malhas trivalentes multi-camadas prontas para fatiador:</p>
-                        <button onclick="baixarArquivoStl(); fecharModalGlobal();" style="background:var(--accent-orange); color:#000; border:none; padding:8px; border-radius:3px; font-weight:bold; cursor:pointer; margin-top:6px;">Baixar Arquivos .STL</button>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar & Layout */
+        sidebar, .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 15px;
+            position: relative;
+            transition: transform 0.3s ease;
+            z-index: 10;
+            overflow-y: auto !important;
+            max-height: 100vh;
+        }
+
+        sidebar::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 6px; }
+        sidebar::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: #141414; }
+        sidebar::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
+
+        sidebar.collapsed, .sidebar.collapsed {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+        }
+
+        .hamburger-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #222;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 20;
+            font-size: 16px;
+        }
+        .hamburger-btn:hover { background: #333; border-color: var(--primary-color); }
+
+        .sidebar-brand { text-align: center; margin-bottom: 20px; }
+        .sidebar-brand video { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; }
+        .sidebar-brand h2 { font-size: 14px; color: var(--primary-color); margin: 6px 0 0 0; text-transform: uppercase; }
+
+        .nav-section { margin-bottom: 15px; }
+        .nav-section h4 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        .nav-link-btn, .filter-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-main);
+            border: 1px solid transparent; text-align: left; padding: 9px 12px;
+            border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 4px; transition: 0.2s;
+        }
+        .nav-link-btn:hover, .nav-link-btn.active, .filter-btn:hover, .filter-btn.active {
+            background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color);
+        }
+
+        /* Submenus Hierárquicos de Inventário */
+        .submenu-container { padding-left: 12px; border-left: 2px solid var(--border-color); margin: 5px 0 10px 5px; display: none; }
+        .submenu-container.show { display: block; }
+        .sub-item-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-muted);
+            border: none; text-align: left; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 2px;
+        }
+        .sub-item-btn:hover, .sub-item-btn.active { color: var(--primary-color); background: #222; }
+
+        .admin-toggle-header {
+            font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+            cursor: pointer; padding: 6px 0; border-top: 1px solid var(--border-color);
+            margin-top: 10px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .admin-controls { background: #1e1e1e; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); margin: 5px 0 10px 0; display: none; }
+        .admin-controls.show { display: block; }
+        .admin-controls label { font-size: 10px; display: block; margin-top: 5px; color: var(--text-muted); }
+        .admin-controls input, .admin-controls select { width: 100%; padding: 5px; font-size: 11px; margin-top: 2px; background: #111; border: 1px solid #444; color: white; border-radius: 4px; }
+
+        main { flex: 1; padding: 25px; padding-left: 65px; overflow-y: auto; }
+        main.full { padding-left: 25px; }
+
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid var(--border-color); }
+        .hidden { display: none !important; }
+        form { display: flex; flex-direction: column; gap: 10px; }
+        label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+
+        input, button, select, textarea { padding: 9px 12px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: #2a2a2a; color: white; outline: none; }
+        textarea { resize: vertical; min-height: 80px; }
+        input:focus, select:focus { border-color: var(--primary-color); }
+
+        button.action-btn { background: var(--primary-color); color: #121212; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 12px; }
+        button.action-btn:hover { background: var(--primary-hover); }
+
+        .google-btn { background: #ffffff; color: #121212; border: none; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; width: 100%; }
+        .google-btn:hover { background: #e0e0e0; }
+
+        .calc-box { background: #252525; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
+        .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
+        .calc-row div { display: flex; flex-direction: column; gap: 4px; }
+        .result-text { margin-top: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 8px; }
+        #precoSugerido { color: var(--primary-color); font-size: 16px; font-weight: bold; }
+        #stlResultado { margin-top: 10px; background: #2a2a2a; padding: 10px; border-radius: 6px; font-size: 11px; font-family: monospace; color: #ddd; }
+
+        .logout-btn { background: var(--danger); color: white; padding: 8px; font-size: 11px; margin-top: 15px; width: 100%; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        
+        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        table.data-table th, table.data-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        table.data-table th { color: var(--primary-color); text-transform: uppercase; font-size: 10px; background: #1a1a1a; }
+        .status-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .status-pending { background: #332b00; color: var(--warning); }
+        .status-approved { background: #0c2b14; color: var(--success); }
+    </style>
+</head>
+<body>
+
+    <button class="hamburger-btn hidden" id="hamburgerToggle" aria-label="Abrir menu">☰</button>
+
+    <!-- TELA DE LOGIN NORMAL -->
+    <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
+        <div class="card" style="text-align: center;">
+            <div style="width: 180px; height: 120px; margin: 0 auto 15px auto; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                <video id="logoVideo" style="width:100%; height:100%; object-fit:cover;" src="animação logo.mp4" muted playsinline></video>
+            </div>
+            <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
+
+            <form id="loginForm">
+                <label>E-mail</label>
+                <input type="email" id="loginEmail" name="email_admin" autocomplete="email" required placeholder="admin@adore.com">
+
+                <label>Senha</label>
+                <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" placeholder="Sua senha">
+
+                <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
+            </form>
+            <div id="loginErro" style="color: var(--danger); font-size: 11px; margin-top: 10px;"></div>
+        </div>
+    </div>
+
+    <!-- MENU LATERAL -->
+    <sidebar id="sidebarNav" class="hidden">
+        <div class="sidebar-brand" style="margin-top: 10px;">
+            <video src="animação logo.mp4" muted autoplay loop style="width: 80px; height: 50px; border-radius: 4px;"></video>
+            <h2 id="userWelcomeTitle">Adorê Adm</h2>
+        </div>
+
+        <div class="nav-section">
+            <h4>Navegação Principal</h4>
+            <button class="nav-link-btn" type="button" onclick="window.location.href='Oficina.html'" style="background: rgba(255,123,0,0.15); border-color: var(--primary-color); color: var(--primary-color); font-weight: bold; margin-top: 10px;">🚀 Abrir Estúdio 3D Pro</button>
+            <button class="nav-link-btn active" data-target="viewVitrine" type="button">📂 Vitrine & Produtos</button>
+            <button class="nav-link-btn" data-target="viewIA" type="button">🤖 Criador IA (Meshy/Tripo)</button>
+            <button class="nav-link-btn" data-target="viewPedidos" type="button">📦 Gestão de Pedidos</button>
+            <button class="nav-link-btn" data-target="viewInventario" id="btnMenuInventario" type="button">🛠️ Inventário & Materiais ▼</button>
+
+            <div class="submenu-container" id="submenuInventario">
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('empresas')">🏢 Empresas</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('pf')">👤 Pessoa Física</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('lojas')">🛍️ Lojas</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('escolas')">🏫 Escolas</button>
+            </div>
+        </div>
+
+        <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
+    </sidebar>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main id="mainContent" class="hidden full">
+
+        <!-- PÁGINA 1: VITRINE & CALCULADORA STL -->
+        <div id="viewVitrine" class="admin-view">
+            <div class="card calc-box">
+                <h3>Calculadora Automática & Leitor STL</h3>
+                
+                <div class="calc-row" style="grid-template-columns: 1fr; margin-bottom: 12px;">
+                    <div>
+                        <label style="color: var(--primary-color);">📁 Carregar Arquivo 3D (STL) para Leitura Automática</label>
+                        <input type="file" id="inputArquivoStlCalc" accept=".stl" style="background: #181818; border: 1px dashed var(--primary-color);">
                     </div>
-                </div>`;
-        }
+                </div>
 
-        function baixarArquivoStl() {
-            const exporter = new THREE.STLExporter();
-            const result = exporter.parse(scene, { binary: true });
-            const blob = new Blob([result], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = `bambu_multilayer_model.stl`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            falarKrom("Arquivo .STL binário exportado com sucesso para o Bambu Studio!");
-        }
+                <div class="calc-row">
+                    <div><label>Peso Calculado / Informado (g)</label><input type="number" id="calcPeso" value="50"></div>
+                    <div><label>Preço do Kg do Material (R$)</label><input type="number" step="0.01" id="calcPrecoKg" value="90.00"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Dimensão X (cm)</label><input type="number" step="0.01" id="stlDimX" placeholder="Auto"></div>
+                    <div><label>Dimensão Y (cm)</label><input type="number" step="0.01" id="stlDimY" placeholder="Auto"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Dimensão Z (cm)</label><input type="number" step="0.01" id="stlDimZ" placeholder="Auto"></div>
+                    <div><label>Material</label><select id="stlMaterial"><option value="PLA">PLA</option><option value="PETG">PETG</option><option value="ABS">ABS</option><option value="Nylon">Nylon</option></select></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Tempo de Impressão (Horas)</label><input type="number" step="0.1" id="calcHoras" value="4.5"></div>
+                    <div><label>Custo Máquina/h (R$)</label><input type="number" step="0.01" id="calcCustoHora" value="2.50"></div>
+                </div>
+                <div class="calc-row">
+                    <div><label>Margem de Lucro (%)</label><input type="number" id="calcLucro" value="50"></div>
+                    <div style="justify-content: flex-end;"><label>&nbsp;</label><button type="button" class="action-btn" id="btnCalcular">Calcular Preço</button></div>
+                </div>
+                <div class="result-text">
+                    <span>Preço Base Sugerido: <strong id="precoSugerido">R$ 0,00</strong></span>
+                    <button type="button" class="action-btn" id="btnUsarPreco" style="padding: 6px 10px; background: #2e7d32; color: white;">Aplicar no Produto</button>
+                </div>
+                <div id="stlResultado" class="hidden">Nenhum STL carregado ainda.</div>
+            </div>
 
-        function falarKrom(mensagem) {
-            const chatWindow = document.getElementById("kromChatWindow");
-            const msgs = document.getElementById("kromChatMessages");
-            if(chatWindow) chatWindow.classList.remove("hidden");
-            if(!msgs) return;
-            const bot = document.createElement('div');
-            bot.style.cssText = 'background: var(--bg-surface); color: var(--text-main); padding: 4px; border-radius: 3px; border-left: 2px solid var(--accent-orange);';
-            bot.textContent = `Krom: ${mensagem}`;
-            msgs.appendChild(bot);
-            msgs.scrollTop = msgs.scrollHeight;
-        }
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--primary-color); font-size: 15px; margin-bottom: 10px;">Cadastrar Novo Produto</h3>
+                <form id="produtoForm">
+                    <div class="calc-row">
+                        <div><label>Nome do Produto</label><input type="text" id="produtoNome" name="nome" placeholder="Nome do modelo 3D" required></div>
+                        <div>
+                            <label>Categoria</label>
+                            <select id="categoriaInput" name="categoria" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
+                                <option value="Decoração">Decoração</option>
+                                <option value="Utilidades">Utilidades</option>
+                                <option value="Personalizados">Personalizados</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Preço de Venda (R$)</label><input type="number" step="0.01" id="preco" name="preco" required></div>
+                        <div><label>Link Externo (URL)</label><input type="text" id="link_externo" name="link_externo" placeholder="https://..."></div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Imagem de Capa</label><input type="file" id="imagem" name="imagem" accept="image/*"></div>
+                        <div><label>Arquivo do Produto / 3D</label><input type="file" id="inputArquivoStl" name="stl" accept=".stl"></div>
+                    </div>
+                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Salvar no Sistema</button>
+                </form>
+                <div id="resultado" style="margin-top: 10px; font-size: 11px;">Aguardando envio...</div>
+            </div>
 
-        function fecharModalGlobal() { document.getElementById('kromModalContainer'].innerHTML = ''; }
-        function zoomNaPlaca() { if(controls) controls.target.set(0,0,0); camera.position.set(0, 4.5, 0.01); falarKrom("Zoom na placa PEI."); }
-        function mudarVisaoAngulo(ang) {
-            if(!controls) return;
-            if(ang.includes('topo')) camera.position.set(0, 7.0, 0.01);
-            else if(ang.includes('esq')) camera.position.set(-7.0, 2.0, 0);
-            else if(ang.includes('dir')) camera.position.set(7.0, 2.0, 0);
-            else camera.position.set(0, 4.5, 7.0);
-            controls.target.set(0, 0, 0);
-            falarKrom(`Visão 3D alterada para o ângulo: ${ang}.`);
-        }
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">Vitrine • Peças Cadastradas</h3>
+                <div id="produtosLista" class="products-grid">
+                    <p style="color: var(--text-muted); font-size: 12px;">Nenhum produto listado.</p>
+                </div>
+            </div>
+        </div>
 
-        document.addEventListener("DOMContentLoaded", () => {
-            initThreeViewer();
-            const avatarToggle = document.getElementById("kromAvatarToggle");
-            const chatWindow = document.getElementById("kromChatWindow");
-            const fecharChat = document.getElementById("fecharChatKrom");
-            if (avatarToggle && chatWindow) avatarToggle.addEventListener("click", () => chatWindow.classList.toggle("hidden"));
-            if (fecharChat && chatWindow) fecharChat.addEventListener("click", () => chatWindow.classList.add("hidden"));
+        <!-- PÁGINA 2: CRIADOR IA -->
+        <div id="viewIA" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🤖 Criador de Arte & Modelo 3D por IA</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Gere modelos tridimensionais via prompts descritivos.</p>
+            </div>
+        </div>
 
-            const inputTxt = document.getElementById("kromInputText");
-            const sendBtn = document.getElementById("kromSendBtn");
-            if (sendBtn && inputTxt) {
-                sendBtn.addEventListener('click', () => {
-                    if(inputTxt.value.trim()) { falarKrom(inputTxt.value); inputTxt.value = ''; }
+        <!-- PÁGINA 3: PEDIDOS -->
+        <div id="viewPedidos" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📦 Gestão de Pedidos & Aprovações</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaPedidosCorpo">
+                        <tr>
+                            <td>#1042</td>
+                            <td>cliente@email.com</td>
+                            <td>Suporte de Comando 3D</td>
+                            <td><span class="status-badge status-pending">Aguardando</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PÁGINA 4: INVENTÁRIO -->
+        <div id="viewInventario" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🛠️ Gestão de Inventário (Materiais)</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Controle de filamentos e insumos da oficina.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- SCRIPTS DE CONTROLE, LEITOR STL E PRECIFICAÇÃO AUTOMÁTICA -->
+    <script>
+        const ADMIN_EMAIL_BYPASS = "ftoty.fernando@gmail.com";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Bypass de Login do Administrador
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const emailInput = document.getElementById('loginEmail').value.trim().toLowerCase();
+                    if (emailInput === ADMIN_EMAIL_BYPASS || emailInput !== "") {
+                        localStorage.setItem('adore_admin_session', JSON.stringify({ email: emailInput, role: 'admin' }));
+                        
+                        document.getElementById('loginSection').classList.add('hidden');
+                        document.getElementById('sidebarNav').classList.remove('hidden');
+                        document.getElementById('mainContent').classList.remove('hidden');
+                        document.getElementById('hamburgerToggle').classList.remove('hidden');
+                        
+                        const welcomeTitle = document.getElementById('userWelcomeTitle');
+                        if (welcomeTitle) welcomeTitle.textContent = emailInput === ADMIN_EMAIL_BYPASS ? "Fernando Dias (Admin)" : emailInput;
+                    }
+                });
+            }
+
+            // 2. Navegação do Menu Lateral (Views)
+            const navButtons = document.querySelectorAll('.nav-link-btn[data-target]');
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetView = btn.getAttribute('data-target');
+                    
+                    // Remove classe ativa de todos
+                    navButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    // Oculta todas as views e mostra a selecionada
+                    document.querySelectorAll('.admin-view').forEach(view => view.classList.add('hidden'));
+                    const targetEl = document.getElementById(targetView);
+                    if (targetEl) targetEl.classList.remove('hidden');
+                });
+            });
+
+            // 3. Submenu Inventário Toggle
+            const btnMenuInv = document.getElementById('btnMenuInventario');
+            const subMenuInv = document.getElementById('submenuInventario');
+            if (btnMenuInv && subMenuInv) {
+                btnMenuInv.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    subMenuInv.classList.toggle('show');
+                });
+            }
+
+            // 4. Botão Sair / Logout
+            const btnLogout = document.getElementById('btnLogout');
+            if (btnLogout) {
+                btnLogout.addEventListener('click', () => {
+                    localStorage.removeItem('adore_admin_session');
+                    location.reload();
+                });
+            }
+
+            // 5. MOTOR DE LEITURA STL E PRECIFICAÇÃO AUTOMÁTICA
+            const inputStlCalc = document.getElementById('inputArquivoStlCalc');
+            if (inputStlCalc) {
+                inputStlCalc.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        try {
+                            const contents = event.target.result;
+                            const loader = new THREE.STLLoader();
+                            const geometry = loader.parse(contents);
+
+                            // Computa bounding box para obter as dimensões reais em centímetros
+                            geometry.computeBoundingBox();
+                            const box = geometry.boundingBox;
+                            const sizeX = (box.max.x - box.min.x) / 10; // mm para cm
+                            const sizeY = (box.max.y - box.min.y) / 10;
+                            const sizeZ = (box.max.z - box.min.z) / 10;
+
+                            document.getElementById('stlDimX').value = sizeX.toFixed(2);
+                            document.getElementById('stlDimY').value = sizeY.toFixed(2);
+                            document.getElementById('stlDimZ').value = sizeZ.toFixed(2);
+
+                            // Estimativa de volume aproximada baseada na malha e preenchimento padrão de 20%
+                            let volumeCm3 = (sizeX * sizeY * sizeZ) * 0.25; 
+                            if (isNaN(volumeCm3) || volumeCm3 <= 0) volumeCm3 = 45; // fallback seguro
+
+                            // Densidade média do PLA (~1.24 g/cm³)
+                            const pesoEstimado = volumeCm3 * 1.24;
+                            document.getElementById('calcPeso').value = pesoEstimado.toFixed(1);
+
+                            // Feedback visual
+                            const stlRes = document.getElementById('stlResultado');
+                            stlRes.classList.remove('hidden');
+                            stlRes.innerHTML = `<strong>STL Lido com Sucesso:</strong><br>` +
+                                               `• Dimensões: ${sizeX.toFixed(1)} x ${sizeY.toFixed(1)} x ${sizeZ.toFixed(1)} cm<br>` +
+                                               `• Peso Estimado (20% infill): ${pesoEstimado.toFixed(1)}g`;
+
+                            // Dispara o cálculo automático imediato
+                            calcularPrecoAutomatico();
+                        } catch (err) {
+                            console.error("Erro ao processar arquivo STL:", err);
+                            alert("Erro ao ler o arquivo STL. Verifique se o formato é válido.");
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            // 6. Lógica de Cálculo Automático de Preço
+            const btnCalcular = document.getElementById('btnCalcular');
+            if (btnCalcular) {
+                btnCalcular.addEventListener('click', calcularPrecoAutomatico);
+            }
+
+            function calcularPrecoAutomatico() {
+                const peso = parseFloat(document.getElementById('calcPeso').value) || 0;
+                const precoKg = parseFloat(document.getElementById('calcPrecoKg').value) || 0;
+                const horas = parseFloat(document.getElementById('calcHoras').value) || 0;
+                const custoHora = parseFloat(document.getElementById('calcCustoHora').value) || 0;
+                const lucroPerc = parseFloat(document.getElementById('calcLucro').value) || 50;
+
+                // Custos: (Peso em gramas / 1000 * Preço do Kg) + (Horas * Custo por hora da máquina)
+                const custoMaterial = (peso / 1000) * precoKg;
+                const custoOperacional = horas * custoHora;
+                const custoTotal = custoMaterial + custoOperacional;
+
+                // Preço com margem de lucro
+                const precoFinal = custoTotal * (1 + (lucroPerc / 100));
+
+                const spanSugerido = document.getElementById('precoSugerido');
+                if (spanSugerido) {
+                    spanSugerido.textContent = `R$ ${precoFinal.toFixed(2)}`;
+                }
+            }
+
+            // 7. Botão Aplicar Preço no Formulário de Cadastro de Produto
+            const btnUsarPreco = document.getElementById('btnUsarPreco');
+            if (btnUsarPreco) {
+                btnUsarPreco.addEventListener('click', () => {
+                    const textoPreco = document.getElementById('precoSugerido').textContent;
+                    const valorNumerico = textoPreco.replace('R$', '').trim();
+                    const campoPrecoProduto = document.getElementById('preco');
+                    if (campoPrecoProduto) {
+                        campoPrecoProduto.value = valorNumerico;
+                        alert("Preço aplicado com sucesso no formulário de cadastro de produto!");
+                    }
                 });
             }
         });
+
+        function filtrarInventarioSetor(setor) {
+            console.log("Filtrando inventário para o setor:", setor);
+        }
     </script>
 </body>
 </html>

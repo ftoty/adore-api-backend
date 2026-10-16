@@ -1,0 +1,117 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - button "⚙️ Voltar ao Painel Admin" [ref=e3] [cursor=pointer]
+    - generic [ref=e4]: "|"
+    - button "📁 Adicionar Imagem 3D" [ref=e5] [cursor=pointer]
+    - button "✂️ Alternar Fundo" [ref=e6] [cursor=pointer]
+    - button "📥 Exportar p/ Bambu (.STL)" [ref=e7] [cursor=pointer]
+  - generic [ref=e8]:
+    - button "🔲" [ref=e9] [cursor=pointer]
+    - button "🔺" [ref=e10] [cursor=pointer]
+    - button "📁" [ref=e12] [cursor=pointer]
+    - button "🖨️" [ref=e13] [cursor=pointer]
+  - generic [ref=e14]:
+    - complementary [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: Parâmetros & Slicer Bambu Engine
+        - generic [ref=e18]:
+          - generic [ref=e19]: "Placa Largura (X):"
+          - spinbutton [ref=e20]: "4.5"
+        - generic [ref=e21]:
+          - generic [ref=e22]: "Placa Profund (Y):"
+          - spinbutton [ref=e23]: "4.5"
+        - generic [ref=e24]:
+          - generic [ref=e25]: "Placa Espessura:"
+          - spinbutton [ref=e26]: "0.3"
+      - generic [ref=e27]:
+        - generic [ref=e28]: Técnica Tridimensional (Multi-Layer)
+        - generic [ref=e29]:
+          - generic [ref=e30]: "Qtd Camadas 3D:"
+          - spinbutton [ref=e31]: "4"
+        - generic [ref=e32]:
+          - generic [ref=e33]: "Altura Camada:"
+          - spinbutton [ref=e34]: "0.1"
+      - generic [ref=e35]:
+        - generic [ref=e36]: Modelagem CAD Paramétrica (mm)
+        - paragraph [ref=e37]: Edite as medidas para atualizar a peça no visualizador. O diâmetro do furo deve ser menor que as dimensões externas.
+        - generic [ref=e38]:
+          - generic [ref=e39]: "Forma:"
+          - combobox "Forma da peça CAD" [ref=e40]:
+            - option "Placa retangular" [selected]
+            - option "Cilindro"
+        - generic [ref=e41]:
+          - generic [ref=e42]: "Comprimento (X):"
+          - spinbutton "Comprimento ou diâmetro externo em milímetros" [ref=e43]: "100"
+        - generic [ref=e44]:
+          - generic [ref=e45]: "Largura (Y):"
+          - spinbutton "Largura em milímetros" [ref=e46]: "50"
+        - generic [ref=e47]:
+          - generic [ref=e48]: "Espessura (Z):"
+          - spinbutton "Espessura em milímetros" [ref=e49]: "10"
+        - generic [ref=e50]:
+          - generic [ref=e51]: "Diâmetro do furo:"
+          - spinbutton "Diâmetro do furo passante em milímetros" [ref=e52]: "8"
+        - paragraph [ref=e53]: Use 0 mm para criar uma peça sem furo. A exportação STL usa milímetros.
+        - generic [ref=e54]:
+          - button "Enquadrar peça" [ref=e55] [cursor=pointer]
+          - button "Exportar peça STL" [ref=e56] [cursor=pointer]
+        - status [ref=e57]: "Visualização atualizada: 100 × 50 × 10 mm · 532 faces."
+      - generic [ref=e58]:
+        - generic [ref=e59]: Scene Explorer
+        - generic [ref=e60]:
+          - generic [ref=e61] [cursor=pointer]: 📦 Placa_Principal (Base)
+          - generic [ref=e63] [cursor=pointer]: 🔺 Objeto_Multi_Camadas
+          - generic [ref=e65] [cursor=pointer]: 🧩 Peça CAD Paramétrica
+    - main [ref=e67]:
+      - generic [ref=e68]:
+        - generic [ref=e69]:
+          - generic [ref=e70] [cursor=pointer]: "[+] [Estúdio 3D Pro - Adorê Engine]"
+          - text: "|"
+          - generic [ref=e71] [cursor=pointer]: "[Selecionado: Placa_Principal]"
+        - generic [ref=e73]:
+          - generic [ref=e74] [cursor=pointer]: ↖
+          - generic [ref=e75] [cursor=pointer]: ⬆
+          - generic [ref=e76] [cursor=pointer]: ↗
+          - generic [ref=e77] [cursor=pointer]: ⬅
+          - generic "Zoom Placa" [ref=e78] [cursor=pointer]: 🔍
+          - generic [ref=e79] [cursor=pointer]: ➡
+          - generic [ref=e80] [cursor=pointer]: ↙
+          - generic [ref=e81] [cursor=pointer]: ⬇
+          - generic [ref=e82] [cursor=pointer]: ↘
+    - complementary [ref=e85]:
+      - generic [ref=e86]:
+        - generic [ref=e87]: 🤖 Adorê IA • Modelagem por IA
+        - generic [ref=e88]: "Modo de Criação:"
+        - combobox [ref=e89]:
+          - option "Imagem 2D para sólido STL" [selected]
+          - option "Texto (requer provedor de IA 3D)"
+        - generic [ref=e90]:
+          - text: "Imagem de contorno (PNG, JPEG ou WebP):"
+          - button "Imagem de contorno (PNG, JPEG ou WebP):" [ref=e91]
+          - paragraph [ref=e92]: A imagem determina o contorno 2D; uma extrusão uniforme cria o volume. A imagem sozinha não revela detalhes 3D escondidos.
+          - generic [ref=e93]:
+            - generic [ref=e94]: "Largura final (mm):"
+            - spinbutton "Largura final (mm):" [ref=e95]: "100"
+          - generic [ref=e96]:
+            - generic [ref=e97]: "Espessura (mm):"
+            - spinbutton "Espessura (mm):" [ref=e98]: "3"
+          - generic [ref=e99]:
+            - generic [ref=e100]: "Remoção do fundo:"
+            - combobox "Remoção do fundo:" [ref=e101]:
+              - option "Automática (alpha/cantos)" [selected]
+              - option "Transparência alpha"
+              - option "Cor dos cantos"
+          - generic [ref=e102]:
+            - generic [ref=e103]: "Tolerância da cor:"
+            - spinbutton "Tolerância da cor:" [ref=e104]: "40"
+          - button "Gerar sólido 3D fechado" [ref=e105] [cursor=pointer]
+          - status [ref=e106]: Selecione uma imagem com silhueta bem definida.
+      - generic [ref=e107]:
+        - generic [ref=e108]: Modifier History Stack
+        - generic [ref=e109]:
+          - generic [ref=e110]: 📍 Placa Principal (Z=0)
+          - generic [ref=e111]: 📍 Triangulação Multi-Layers (Bambu)
+          - generic [ref=e112]: ⚙️ Manifold Fechado
+  - contentinfo [ref=e113]:
+    - generic [ref=e114]: Adorê Estúdio 3D Pro Active
+  - generic "Krom Assistant" [ref=e116] [cursor=pointer]

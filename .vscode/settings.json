@@ -1,0 +1,5 @@
+{
+    "chat.tools.terminal.ignoreDefaultAutoApproveRules": true,
+    "chat.permissions.default": "autoApprove",
+    "chat.agent.sandbox.network.allowLocalNetwork": true
+}

@@ -5,12 +5,17 @@
 // Função acionada quando o usuário clica em assinar ou comprar créditos na Oficina Adorê
 async function iniciarPagamentoMercadoPago(planoNome, valorPreco) {
     // 1. Verifica se o usuário está logado no Supabase
-    if (!window.supabaseClient) {
+    if (!authSupabaseClient) {
         alert("Erro: Sistema de sessão não inicializado.");
         return;
     }
 
-    const { data: { user } } = await window.supabaseClient.auth.getUser();
+    const { data: { user }, error } = await authSupabaseClient.auth.getUser();
+    if (error) {
+        console.error("Erro ao verificar sessão para pagamento:", error);
+        alert("Não foi possível verificar sua sessão. Faça login novamente.");
+        return;
+    }
     if (!user) {
         alert("Por favor, faça login na Oficina Adorê antes de realizar um upgrade.");
         if (typeof abrirModalAuth === 'function') abrirModalAuth('login');
@@ -41,6 +46,5 @@ document.addEventListener("DOMContentLoaded", () => {
     // Exemplo: se houver um botão de plano mestre nos modais
     window.assinarPlanoMestre = function() {
         iniciarPagamentoMercadoPago("Mestre Artesão Adorê", 89.00);
-        <button onclick="assinarPlanoMestre()" style="background: var(--accent-green); color: #000; ...">Assinar com Mercado Pago</button>
     };
 });

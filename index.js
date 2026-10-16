@@ -1,6 +1,12 @@
 // ==========================================
 // 1. IMPORTAÇÕES E CONFIGURAÇÃO GLOBAL
 // ==========================================
+import { createRequire } from 'node:module';
+import iaRouter from './routes/ia.js';
+
+const require = createRequire(import.meta.url);
+require('dotenv').config();
+
 const express = require('express');
 const { Pool } = require('pg');
 const { createClient } = require('@supabase/supabase-js');
@@ -8,13 +14,28 @@ const multer = require('multer');
 const path = require('path');
 const cors = require('cors');
 const app = express();
+const additionalCorsOrigins = (process.env.CORS_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
 app.use(cors({
-    origin: ['https://app.netlify.com', 'https://www.adorepersonalite.com', /\.wixsite\.com$/],
+    origin: [
+        'https://app.netlify.com',
+        'https://www.adorepersonalite.com',
+        'http://localhost:1420',
+        'http://localhost:5173',
+        /\.netlify\.app$/,
+        /\.wixsite\.com$/,
+        ...additionalCorsOrigins
+    ],
     credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '12mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.set('trust proxy', 1);
+
+app.use('/api/ia', iaRouter);
 
 // Disponibilizar a pasta de uploads publicamente
 app.use('/uploads', express.static('uploads'));

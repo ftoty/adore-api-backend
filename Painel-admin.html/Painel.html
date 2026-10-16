@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adorê - Painel Administrativo Completo</title>
+    <title>Adorê - Painel Administrativo Completo & Vitrine 3D</title>
 
     <!-- Bibliotecas e SDKs Externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <style>
         :root {
@@ -37,8 +38,7 @@
             overflow: hidden;
         }
 
-        /* Sidebar & Layout */
-        sidebar, .sidebar {
+        aside, .sidebar {
             width: 280px;
             background: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
@@ -52,11 +52,11 @@
             max-height: 100vh;
         }
 
-        sidebar::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 6px; }
-        sidebar::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: #141414; }
-        sidebar::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
+        aside::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 6px; }
+        aside::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: #141414; }
+        aside::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
 
-        sidebar.collapsed, .sidebar.collapsed {
+        aside.collapsed, .sidebar.collapsed {
             transform: translateX(-100%);
             position: absolute;
             height: 100%;
@@ -92,7 +92,6 @@
             background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color);
         }
 
-        /* Submenus Hierárquicos de Inventário */
         .submenu-container { padding-left: 12px; border-left: 2px solid var(--border-color); margin: 5px 0 10px 5px; display: none; }
         .submenu-container.show { display: block; }
         .sub-item-btn {
@@ -126,23 +125,32 @@
         button.action-btn { background: var(--primary-color); color: #121212; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 12px; }
         button.action-btn:hover { background: var(--primary-hover); }
 
-        .google-btn { background: #ffffff; color: #121212; border: none; padding: 10px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px; width: 100%; }
-        .google-btn:hover { background: #e0e0e0; }
-
         .calc-box { background: #252525; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
         .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
         .calc-row div { display: flex; flex-direction: column; gap: 4px; }
         .result-text { margin-top: 10px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 8px; }
         #precoSugerido { color: var(--primary-color); font-size: 16px; font-weight: bold; }
-        #resultado { margin-top: 10px; background: #2a2a2a; padding: 10px; border-radius: 6px; font-size: 11px; font-family: monospace; color: #ddd; }
+        #stlResultado { margin-top: 10px; background: #2a2a2a; padding: 10px; border-radius: 6px; font-size: 11px; font-family: monospace; color: #ddd; }
 
         .logout-btn { background: var(--danger); color: white; padding: 8px; font-size: 11px; margin-top: 15px; width: 100%; }
-        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
-        .product-card { background: #252525; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
-        .product-card img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; background: #111; cursor: pointer; }
+        
+        .category-section { margin-bottom: 25px; }
+        .category-title { color: var(--primary-color); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; font-weight: bold; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+        .product-card { background: #252525; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; transition: 0.2s; }
+        .product-card:hover { border-color: var(--primary-color); }
+        .product-thumb { width: 100%; height: 120px; background: #111; border-radius: 4px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; overflow: hidden; }
         .product-info h4 { margin: 0; font-size: 14px; color: var(--text-main); }
         .product-info p { margin: 2px 0; font-size: 11px; color: var(--text-muted); }
         .product-info .price { color: var(--primary-color); font-weight: bold; font-size: 13px; }
+        
+        .product-actions { display: flex; gap: 6px; margin-top: 6px; }
+        .product-actions button, .product-actions a { flex: 1; text-decoration: none; }
+
+        #modalDetalhesProduto { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: var(--card-bg); border: 1px solid var(--primary-color); border-radius: 12px; width: 90%; max-width: 600px; padding: 25px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+        .close-modal:hover { color: white; }
 
         table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
         table.data-table th, table.data-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
@@ -151,66 +159,67 @@
         .status-pending { background: #332b00; color: var(--warning); }
         .status-approved { background: #0c2b14; color: var(--success); }
 
-        #kromFloatingWidget { position: fixed; bottom: 25px; right: 25px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; }
-        .krom-avatar-bubble { width: 220px; height: 220px; border-radius: 50%; overflow: hidden; border: 4px solid var(--primary-color); box-shadow: 0 10px 30px rgba(0,0,0,0.8); cursor: pointer; background: #111; }
+        #kromFloatingWidget { position: fixed; bottom: 10px; right: 10px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; }
+        .krom-avatar-bubble { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; border: 2px solid var(--primary-color); box-shadow: 0 6px 18px rgba(0,0,0,0.65); cursor: pointer; background: #111; transition: transform 0.2s ease; }
+        .krom-avatar-bubble:hover { transform: scale(1.02); }
         .krom-avatar-bubble video { width: 100%; height: 100%; object-fit: cover; }
-        #kromChatWindow { width: 360px; height: 480px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 15px; }
-        .krom-chat-header { background: #181818; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
-        .krom-chat-header-info { display: flex; align-items: center; gap: 10px; }
-        .krom-chat-header-info video { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
-        .krom-chat-messages { flex: 1; padding: 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
-        .krom-msg { max-width: 85%; padding: 8px 12px; border-radius: 8px; line-height: 1.4; white-space: pre-wrap; }
+        #kromChatWindow { width: 185px; height: 220px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px; }
+        .krom-chat-header { background: #181818; padding: 6px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
+        .krom-chat-header-info { display: flex; align-items: center; gap: 6px; }
+        .krom-chat-header-info video { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary-color); }
+        .krom-chat-messages { flex: 1; padding: 7px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; font-size: 9px; }
+        .krom-msg { max-width: 88%; padding: 5px 7px; border-radius: 8px; line-height: 1.3; white-space: pre-wrap; font-size: 9px; }
         .krom-msg.krom { background: #252525; color: var(--text-main); align-self: flex-start; border-left: 3px solid var(--primary-color); }
         .krom-msg.user { background: var(--primary-color); color: #121212; align-self: flex-end; font-weight: 500; }
-        .krom-chat-input-area { padding: 10px; background: #181818; border-top: 1px solid var(--border-color); display: flex; gap: 6px; }
-        .krom-chat-input-area input { flex: 1; background: #111; color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-size: 12px; }
-        .krom-chat-input-area button { background: var(--primary-color); color: #121212; border: none; padding: 0 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .krom-chat-input-area { padding: 6px 7px; background: #181818; border-top: 1px solid var(--border-color); display: flex; gap: 6px; }
+        .krom-chat-input-area input { flex: 1; background: #111; color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 7px; font-size: 9px; }
+        .krom-chat-input-area button { background: var(--primary-color); color: #121212; border: none; padding: 0 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 9px; }
     </style>
 </head>
 <body>
 
     <button class="hamburger-btn hidden" id="hamburgerToggle" aria-label="Abrir menu">☰</button>
 
-    <!-- TELA DE LOGIN NORMAL -->
+    <!-- TELA DE LOGIN & RECUPERAÇÃO DE SENHA -->
     <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
         <div class="card" style="text-align: center;">
             <div style="width: 180px; height: 120px; margin: 0 auto 15px auto; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                <video id="logoVideo" style="width:100%; height:100%; object-fit:cover;" src="animação logo.mp4" muted playsinline></video>
+                <video id="logoVideo" style="width:100%; height:100%; object-fit:cover;" src="animação logo.mp4" muted playsinline autoplay loop></video>
             </div>
             <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
 
+            <!-- Formulário de Login Principal -->
             <form id="loginForm">
                 <label>E-mail</label>
-                <input type="email" id="loginEmail" name="email_admin" autocomplete="email" required placeholder="admin@adore.com">
+                <input type="email" id="loginEmail" name="email_admin" autocomplete="email" required placeholder="seu.email@adore.com">
 
-                <label>Senha</label>
-                <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" placeholder="Sua senha (opcional para admin)">
+                <div id="campoSenhaContainer">
+                    <label>Senha</label>
+                    <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" placeholder="Sua senha">
+                </div>
 
                 <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
             </form>
 
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
-                <button type="button" id="abrirModalRegistoBtn" style="background: transparent; border: none; color: var(--primary-color); font-size: 11px; cursor: pointer; text-decoration: underline;">
-                    Criar conta
-                </button>
-                <button type="button" id="abrirModalRecuperarBtn" style="background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; text-decoration: underline;">
-                    Recuperar senha
-                </button>
+            <div style="margin-top: 12px; text-align: right;">
+                <a href="#" id="linkEsqueceuSenha" style="font-size: 11px; color: var(--primary-color); text-decoration: none;">Esqueceu a senha? Recuperar acesso</a>
             </div>
 
-            <div style="margin: 15px 0; color: var(--text-muted); font-size: 11px; text-transform: uppercase;">OU</div>
-
-            <button type="button" id="googleLoginBtn" class="google-btn">
-                <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.46-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                Entrar / Registar com Google
-            </button>
+            <!-- Formulário de Recuperação de Senha (Oculto Inicialmente) -->
+            <form id="recuperarSenhaForm" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
+                <h4 style="color: var(--primary-color); font-size: 12px; margin-bottom: 5px;">Recuperação de Senha</h4>
+                <label>Confirme seu E-mail</label>
+                <input type="email" id="recuperarEmailInput" placeholder="seu.email@adore.com" required>
+                <button type="submit" class="action-btn" style="background: var(--warning); color: #121212; padding: 10px; margin-top: 5px;">Enviar Instruções de Recuperação</button>
+                <button type="button" id="btnVoltarLogin" style="background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; margin-top: 5px;">Voltar ao Login</button>
+            </form>
 
             <div id="loginErro" style="color: var(--danger); font-size: 11px; margin-top: 10px;"></div>
         </div>
     </div>
 
     <!-- MENU LATERAL -->
-    <sidebar id="sidebarNav" class="hidden">
+    <aside id="sidebarNav" class="hidden">
         <div class="sidebar-brand" style="margin-top: 10px;">
             <video src="animação logo.mp4" muted autoplay loop style="width: 80px; height: 50px; border-radius: 4px;"></video>
             <h2 id="userWelcomeTitle">Adorê Adm</h2>
@@ -233,84 +242,25 @@
 
         <div class="nav-section">
             <h4>Navegação Principal</h4>
-            <button class="nav-link-btn active" data-target="viewVitrine">📂 Vitrine & Produtos</button>
-            <button class="nav-link-btn" data-target="viewIA">🤖 Criador IA (Meshy/Tripo)</button>
-            <button class="nav-link-btn" data-target="viewPedidos">📦 Gestão de Pedidos</button>
+            <button class="nav-link-btn" type="button" onclick="window.location.href='Oficina.html'" style="background: rgba(255,123,0,0.15); border-color: var(--primary-color); color: var(--primary-color); font-weight: bold; margin-top: 10px;">🚀 Abrir Estúdio 3D Pro</button>
+            <button class="nav-link-btn active" data-target="viewVitrine" type="button">📂 Vitrine & Produtos</button>
+            <button class="nav-link-btn" data-target="viewIA" type="button">🤖 Criador IA & Kits Especiais</button>
+            <button class="nav-link-btn" data-target="viewPedidos" type="button">📦 Gestão de Pedidos</button>
             <button class="nav-link-btn" id="btnAbrirOrcamento" type="button">💰 Gerar Orçamento</button>
 
-            <!-- Inventário e Submenus Jerárquicos -->
-            <button class="nav-link-btn" data-target="viewInventario" id="btnMenuInventario">🛠️ Inventário & Materiais ▼</button>
+            <!-- Inventário e Submenus -->
+            <button class="nav-link-btn" data-target="viewInventario" id="btnMenuInventario" type="button">🛠️ Inventário & Materiais ▼</button>
 
             <div class="submenu-container" id="submenuInventario">
-                <!-- Empresas -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('empresas')">🏢 Empresas</button>
-                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_casa')">Casa</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('empresa_geral')">Geral / Corporativo</button>
-                </div>
-
-                <!-- Pessoa Física -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('pf')">👤 Pessoa Física</button>
-                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_casa')">Casa</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('pf_pessoal')">Uso Pessoal</button>
-                </div>
-
-                <!-- Lojas -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('lojas')">🛍️ Lojas</button>
-                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_casa')">Casa</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('loja_vitrine')">Vitrine Comercial</button>
-                </div>
-
-                <!-- Escolas -->
                 <button class="sub-item-btn" onclick="filtrarInventarioSetor('escolas')">🏫 Escolas</button>
-                <div class="submenu-container" style="display:block; border-left:none; padding-left:8px; margin:2px 0 4px 2px;">
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_estadual')">Estadual</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_municipal')">Municipal</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_particulares')">Particulares</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_cursos')">Cursos Livres</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_faculdades')">Faculdades</button>
-                    <button class="sub-item-btn" onclick="filtrarInventarioCategoria('escola_casa')">Casa</button>
-                </div>
             </div>
-        </div>
-
-        <!-- GERIR CATEGORIAS DE VITRINE -->
-        <div class="nav-section">
-            <h4>Gerir Categorias (Vitrine)</h4>
-            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
-                <input type="text" id="novaCatVitrine" placeholder="Nova Categoria..." style="flex:1; padding:5px; font-size:11px;">
-                <button type="button" id="btnAddCatVitrine" class="action-btn" style="padding: 5px 8px; font-size:10px;">+</button>
-            </div>
-            <select id="selectDelCatVitrine" style="width: 100%; padding: 5px; font-size: 11px; background: #111; color: white; border: 1px solid #444; border-radius: 4px; margin-bottom: 4px;">
-                <option value="">Selecionar para excluir...</option>
-            </select>
-            <button type="button" id="btnDelCatVitrine" style="width: 100%; background: var(--danger); color: white; border: none; padding: 4px; font-size: 10px; border-radius: 4px; cursor: pointer;">Excluir Categoria</button>
-        </div>
-
-        <div class="nav-section" id="subcategoriasSecao">
-            <h4>Filtrar Vitrine</h4>
-            <div id="categoriasFiltrosContainer">
-                <button class="filter-btn active" data-cat="todos">📂 Todas as Peças</button>
-            </div>
-        </div>
-
-        <!-- GERIR CATEGORIAS DE INVENTÁRIO -->
-        <div class="nav-section">
-            <h4>Gerir Setores (Inventário)</h4>
-            <div style="display: flex; gap: 4px; margin-bottom: 6px;">
-                <input type="text" id="novaCatInv" placeholder="Novo Setor..." style="flex:1; padding:5px; font-size:11px;">
-                <button type="button" id="btnAddCatInv" class="action-btn" style="padding: 5px 8px; font-size:10px;">+</button>
-            </div>
-            <select id="selectDelCatInv" style="width: 100%; padding: 5px; font-size: 11px; background: #111; color: white; border: 1px solid #444; border-radius: 4px; margin-bottom: 4px;">
-                <option value="">Selecionar setor...</option>
-            </select>
-            <button type="button" id="btnDelCatInv" style="width: 100%; background: var(--danger); color: white; border: none; padding: 4px; font-size: 10px; border-radius: 4px; cursor: pointer;">Excluir Setor</button>
         </div>
 
         <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
-    </sidebar>
+    </aside>
 
     <!-- KROM FLUTUANTE -->
     <div id="kromFloatingWidget" class="hidden">
@@ -346,45 +296,51 @@
 
         <!-- PÁGINA 1: VITRINE -->
         <div id="viewVitrine" class="admin-view">
+            
+            <div class="card calc-box" style="border: 1px dashed var(--primary-color);">
+                <h3>📦 Leitor Universal em Lote (Extração Completa de Arquivos ZIP)</h3>
+                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Carregue um arquivo .zip. O sistema varre e extrai <strong>absolutamente todos os arquivos</strong> (STL, imagens, PDFs e outros), salvando-os instantaneamente no Supabase e na Vitrine.</p>
+                <div class="calc-row" style="grid-template-columns: 1fr;">
+                    <div>
+                        <label style="color: var(--primary-color);">Selecionar Arquivo .ZIP de Conteúdo Geral</label>
+                        <input type="file" id="inputZipLote" accept=".zip" style="background: #181818;">
+                    </div>
+                </div>
+                <div id="zipStatusLog" style="font-size: 11px; color: var(--warning); margin-top: 5px;"></div>
+            </div>
+
             <div class="card calc-box">
-                <h3>Calculadora Automática (Base: Peso & 50% Lucro)</h3>
-                <div class="calc-row">
-                    <div><label>Peso da Peça (g)</label><input type="number" id="calcPeso" value="50"></div>
-                    <div><label>Preço do Kg (R$)</label><input type="number" step="0.01" id="calcPrecoKg" value="90.00"></div>
+                <h3>🔗 Extrator Automático de Links e Pastas Externas</h3>
+                <form id="formLinkPasta">
+                    <div class="calc-row" style="grid-template-columns: 3fr 1fr;">
+                        <div>
+                            <label>URL ou Repositório de Ativos</label>
+                            <input type="url" id="inputUrlPasta" placeholder="https://drive.google.com/drive/folders/..." required>
+                        </div>
+                        <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="action-btn" style="height: 38px;">Catalogar Link</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="painelSublinks" style="margin-top: 10px; font-size: 11px; color: #ddd;" class="hidden">
+                    <p style="color: var(--primary-color); font-weight: bold;">Ativos e Links Registrados:</p>
+                    <ul id="listaSublinks" style="margin: 5px 0; padding-left: 15px;"></ul>
                 </div>
-                <div class="calc-row">
-                    <div><label>Dimensão X (cm)</label><input type="number" step="0.01" id="stlDimX" placeholder="Auto"></div>
-                    <div><label>Dimensão Y (cm)</label><input type="number" step="0.01" id="stlDimY" placeholder="Auto"></div>
-                </div>
-                <div class="calc-row">
-                    <div><label>Dimensão Z (cm)</label><input type="number" step="0.01" id="stlDimZ" placeholder="Auto"></div>
-                    <div><label>Material</label><select id="stlMaterial"><option value="PLA">PLA</option><option value="PETG">PETG</option><option value="ABS">ABS</option><option value="Nylon">Nylon</option></select></div>
-                </div>
-                <div class="calc-row">
-                    <div><label>Tempo (Horas)</label><input type="number" step="0.1" id="calcHoras" value="4.5"></div>
-                    <div><label>Custo Máquina/h (R$)</label><input type="number" step="0.01" id="calcCustoHora" value="2.50"></div>
-                </div>
-                <div class="calc-row">
-                    <div><label>Margem de Lucro (%)</label><input type="number" id="calcLucro" value="50"></div>
-                    <div style="justify-content: flex-end;"><label>&nbsp;</label><button type="button" class="action-btn" id="btnCalcular">Calcular Preço</button></div>
-                </div>
-                <div class="result-text">
-                    <span>Preço Base Sugerido: <strong id="precoSugerido">R$ 0,00</strong></span>
-                    <button type="button" class="action-btn" id="btnUsarPreco" style="padding: 6px 10px; background: #2e7d32; color: white;">Aplicar no Preço</button>
-                </div>
-                <div id="stlResultado" class="stl-result hidden" aria-live="polite"></div>
-                <button type="button" class="secondary-btn" id="btnGerarOrcamento" style="margin-top: 10px; width: 100%;">Gerar orçamento com estes dados</button>
             </div>
 
             <div class="card">
-                <h3 style="margin-top: 0; color: var(--primary-color); font-size: 15px; margin-bottom: 10px;">Cadastrar Novo Produto</h3>
+                <h3 style="margin-top: 0; color: var(--primary-color); font-size: 15px; margin-bottom: 10px;">Cadastrar Novo Produto / Peça</h3>
                 <form id="produtoForm">
                     <div class="calc-row">
-                        <div><label>Nome do Produto</label><input type="text" id="produtoNome" name="nome" placeholder="Nome do modelo 3D"></div>
+                        <div><label>Nome do Produto</label><input type="text" id="produtoNome" name="nome" placeholder="Nome do modelo 3D" required></div>
                         <div>
                             <label>Categoria</label>
                             <select id="categoriaInput" name="categoria" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
                                 <option value="Decoração">Decoração</option>
+                                <option value="Utilidades">Utilidades</option>
+                                <option value="Personalizados">Personalizados</option>
+                                <option value="Kits Especiais">Kits Especiais</option>
                             </select>
                         </div>
                     </div>
@@ -393,51 +349,59 @@
                         <div><label>Link Externo (URL)</label><input type="text" id="link_externo" name="link_externo" placeholder="https://..."></div>
                     </div>
                     <div class="calc-row">
-                        <div><label>Imagem de Capa</label><input type="file" id="imagem" name="imagem" accept="image/*"></div>
-                        <div><label>Arquivo do Produto / 3D</label><input type="file" id="inputArquivoStl" name="stl" accept="*"></div>
+                        <div><label>Imagem de Capa (Opcional)</label><input type="file" id="inputImagemCapa" name="imagem" accept="image/*"></div>
+                        <div><label>Arquivo do Produto / 3D (.stl)</label><input type="file" id="inputArquivoStlDireto" name="stl" accept=".stl"></div>
                     </div>
-                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Salvar no Supabase</button>
+                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Salvar no Sistema & Supabase</button>
                 </form>
-                <div id="resultado">Aguardando envio...</div>
+                <div id="resultado" style="margin-top: 10px; font-size: 11px;">Aguardando envio...</div>
+            </div>
+
+            <!-- SEÇÃO DE KITS ESPECIAIS & DATAS COMEMORATIVAS -->
+            <div class="card" style="border: 2px solid var(--primary-color);">
+                <h3 style="color: var(--primary-color); margin-top:0;">🎁 Vitrine de Kits & Datas Especiais</h3>
+                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 15px;">Kits organizados automaticamente para datas especiais (Natal, Dia das Crianças, Páscoa, etc.) com download direto dos arquivos STL.</p>
+                <div id="kitsEspeciaisContainer">
+                    <p style="color: var(--text-muted); font-size: 12px;">Carregando kits especiais...</p>
+                </div>
             </div>
 
             <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="color: var(--primary-color); margin: 0; font-size: 15px;" id="tituloVitrine">Vitrine • Todas as Peças</h3>
-                    <button type="button" class="action-btn" id="btnAtualizarLista" style="padding: 5px 8px; font-size: 10px;">Atualizar</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="color: var(--primary-color); margin: 0; font-size: 15px;">Vitrine • Separada por Categorias</h3>
+                    <span id="dbStatusBadge" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; background: #333; color: var(--warning);">Conectando Supabase...</span>
                 </div>
-                <div id="produtosLista" class="products-grid">
-                    <p style="color: var(--text-muted); font-size: 12px;">Carregando...</p>
+                <div id="vitrineCategorizadaContainer">
+                    <p style="color: var(--text-muted); font-size: 12px;">Carregando vitrine...</p>
                 </div>
             </div>
         </div>
 
-        <!-- PÁGINA 2: CRIADOR IA -->
+        <!-- PÁGINA 2: CRIADOR IA & KITS -->
         <div id="viewIA" class="admin-view hidden">
             <div class="card">
-                <h3 style="color: var(--primary-color); margin-top:0;">🤖 Criador de Arte & Modelo 3D por IA</h3>
-                <p style="font-size: 12px; color: var(--text-muted);">Gere conceitos artísticos e envie diretamente para o link de aprovação do cliente.</p>
+                <h3 style="color: var(--primary-color); margin-top:0;">🤖 Criador de Arte, Modelos 3D & Kits Especiais por IA</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Selecione uma data especial ou categoria para gerar pacotes completos de produtos para a vitrine e Supabase.</p>
 
-                <form id="iaGeradorForm">
-                    <label>Provedor de IA</label>
-                    <select id="iaProvedor">
-                        <option value="alpha3d">Alpha3D AI (Text-to-3D / Rápido)</option>
-                        <option value="meshy">Meshy AI (Text-to-3D / Alta Fidelidade)</option>
-                        <option value="tripo">Tripo3D AI (Geração Rápida de Malha)</option>
+                <form id="iaKitForm">
+                    <label>Tipo de Criação</label>
+                    <select id="iaTipoCriacao">
+                        <option value="kit_natal">Kit Especial: Natal 🎄</option>
+                        <option value="kit_criancas">Kit Especial: Dia das Crianças 🧸</option>
+                        <option value="kit_pascoa">Kit Especial: Páscoa 🐰</option>
+                        <option value="kit_valentines">Kit Especial: Dia dos Namorados ❤️</option>
+                        <option value="personalizado">Gerar Peça Única por Prompt</option>
                     </select>
 
-                    <label>Prompt / Descrição Detalhada da Peça</label>
-                    <textarea id="iaPrompt" placeholder="Ex: Suporte para comando de videogame..."></textarea>
+                    <label>Nome / Tema do Kit ou Peça</label>
+                    <input type="text" id="iaKitNome" placeholder="Ex: Coleção Natalina Luxo com Suportes e Enfeites" required>
 
-                    <label>E-mail ou WhatsApp do Cliente</label>
-                    <input type="text" id="iaClienteContato" placeholder="cliente@email.com">
+                    <label>Prompt / Descrição Detalhada</label>
+                    <textarea id="iaPrompt" maxlength="800" placeholder="Descreva os itens que compõem este kit ou modelo..."></textarea>
 
-                    <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px;">Gerar Arte/Modelo e Enviar para Cliente</button>
+                    <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px;">Gerar e Sincronizar com Vitrine & Supabase</button>
                 </form>
-                <div id="iaResultadoStatus" class="hidden" style="margin-top: 15px; background: #252525; padding: 12px; border-radius: 6px; font-size: 12px;">
-                    <p style="color: var(--warning); margin: 0 0 5px 0;"><strong>Status:</strong> Aguardando aprovação do cliente.</p>
-                    <p style="margin: 0;">Link de Aprovação: <a href="#" id="linkAprovacaoVisual" target="_blank" style="color: var(--primary-color);">Copiar Link</a></p>
-                </div>
+                <div id="iaStatusLog" style="font-size: 11px; margin-top: 10px; color: var(--success);"></div>
             </div>
         </div>
 
@@ -451,19 +415,15 @@
                             <th>ID Pedido</th>
                             <th>Cliente</th>
                             <th>Descrição</th>
-                            <th>Motor IA</th>
                             <th>Status</th>
-                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tabelaPedidosCorpo">
                         <tr>
                             <td>#1042</td>
                             <td>cliente@email.com</td>
-                            <td>Suporte de Comando Dragão</td>
-                            <td>Meshy AI</td>
-                            <td><span class="status-badge status-pending">Aguardando Cliente</span></td>
-                            <td><button onclick="simularAprovacaoCliente(1042)" style="background: var(--success); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10px;">Aprovar</button></td>
+                            <td>Suporte de Comando 3D</td>
+                            <td><span class="status-badge status-pending">Aguardando</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -474,274 +434,346 @@
         <div id="viewInventario" class="admin-view hidden">
             <div class="card">
                 <h3 style="color: var(--primary-color); margin-top:0;">🛠️ Gestão de Inventário (3D & Sublimação)</h3>
-                <form id="materialForm">
-                    <div class="calc-row">
-                        <div><label>Nome do Material</label><input type="text" id="matNome" placeholder="Ex: PLA Azul / Caneca" required></div>
-                        <div>
-                            <label>Segmento / Setor</label>
-                            <select id="matTipo" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
-                                <option value="empresas">Empresas</option>
-                                <option value="pf">Pessoa Física</option>
-                                <option value="lojas">Lojas</option>
-                                <option value="escolas">Escolas</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="calc-row">
-                        <div><label>Quantidade</label><input type="number" step="0.01" id="matQtd" required></div>
-                        <div>
-                            <label>Unidade</label>
-                            <select id="matUnidade">
-                                <option value="g">Gramas (g)</option>
-                                <option value="kg">Quilogramas (kg)</option>
-                                <option value="unidades">Unidades (un)</option>
-                                <option value="ml">Mililitros (ml)</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="calc-row">
-                        <div><label>Custo Unitário (R$)</label><input type="number" step="0.01" id="matCusto" required></div>
-                        <div><label>Fornecedor</label><input type="text" id="matFornecedor"></div>
-                    </div>
-                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Adicionar Material</button>
-                </form>
-                <div id="matResultado" style="font-size: 11px; margin-top: 10px; color: var(--text-muted);"></div>
-            </div>
-
-            <div class="card">
-                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📦 Lista de Materiais</h3>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Material</th>
-                            <th>Setor</th>
-                            <th>Quantidade</th>
-                            <th>Custo Unit.</th>
-                            <th>Fornecedor</th>
-                            <th>Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabelaMateriaisCorpo">
-                        <tr><td colspan="6" style="color: var(--text-muted); text-align: center;">Carregando...</td></tr>
-                    </tbody>
-                </table>
+                <p style="font-size: 12px; color: var(--text-muted);">Controle de filamentos e insumos da oficina.</p>
             </div>
         </div>
 
     </main>
 
-    <!-- MODAL DE PRIMEIRO ACESSO -->
-    <div id="modalPrimeiroAcesso" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; align-items: center; justify-content: center;">
-        <div class="card" style="width: 100%; max-width: 420px; background: var(--card-bg); border: 1px solid var(--primary-color); position: relative; padding: 25px;">
-            <button type="button" id="fecharModalBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
-
-            <h3 style="color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; font-size: 16px;">Criar Conta de Administrador</h3>
-
-            <form id="formPrimeiroAcesso">
-                <label>Nome Completo</label>
-                <input type="text" id="regNome" required placeholder="Ex: Maria Silva">
-
-                <label>E-mail</label>
-                <input type="email" id="regEmail" required placeholder="admin@adore.com">
-
-                <label>Telefone / WhatsApp</label>
-                <input type="text" id="regTelefone" required placeholder="Ex: (11) 99999-9999">
-
-                <label>Cargo</label>
-                <input type="text" id="regCargo" required placeholder="Ex: Gestora de Produção">
-
-                <label>Senha</label>
-                <input type="password" id="regSenha" required placeholder="Mínimo 6 caracteres">
-
-                <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Registar Administrador</button>
-            </form>
-            <div id="regErro" style="color: var(--danger); font-size: 11px; margin-top: 10px; text-align: center;"></div>
+    <!-- MODAL DE DETALHES -->
+    <div id="modalDetalhesProduto" class="hidden">
+        <div class="modal-content">
+            <button class="close-modal" id="fecharModalDetalhes">✕</button>
+            <h3 id="modalTituloProduto" style="color: var(--primary-color); margin-top:0;">Detalhes do Produto</h3>
+            <div id="modalCorpoDetalhes" style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;"></div>
         </div>
     </div>
 
-    <!-- MODAL DE RECUPERAÇÃO DE SENHA -->
-    <div id="modalRecuperarSenha" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 99999; display: flex; align-items: center; justify-content: center;">
-        <div class="card" style="width: 100%; max-width: 400px; background: var(--card-bg); border: 1px solid var(--primary-color); position: relative; padding: 25px;">
-            <button type="button" id="fecharModalRecuperarBtn" style="position: absolute; top: 15px; right: 15px; background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
-
-            <h3 style="color: var(--primary-color); margin-top: 0; margin-bottom: 15px; text-align: center; font-size: 16px;">Recuperar acesso</h3>
-            <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-bottom: 15px;">Escolha e-mail ou celular. O envio usa a configuração do Supabase.</p>
-            <div class="calc-row">
-                <button type="button" class="recovery-channel active" data-channel="email">E-mail</button>
-                <button type="button" class="recovery-channel" data-channel="sms">SMS / Celular</button>
-            </div>
-            <form id="formRecuperarSenha">
-                <label id="recLabel">E-mail cadastrado</label>
-                <input type="email" id="recEmailInput" placeholder="admin@adore.com">
-                <input type="tel" id="recPhoneInput" class="hidden" placeholder="+55 11 99999-9999">
-                <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Enviar instrução</button>
-            </form>
-            <div id="recuperarMsg" style="font-size: 11px; margin-top: 10px; text-align: center;"></div>
-        </div>
-    </div>
-
-    <!-- MODAL DE ORÇAMENTO -->
-    <div id="modalOrcamento" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.82); z-index: 99998; align-items: center; justify-content: center; overflow-y: auto; padding: 24px;">
-        <div class="card" style="width: min(900px, 100%); max-height: 94vh; overflow-y: auto; border-color: var(--primary-color); position: relative;">
-            <div class="budget-modal-controls">
-                <button type="button" id="minimizarModalOrcamento" title="Minimizar">—</button>
-                <button type="button" id="fecharModalOrcamento" title="Fechar">✕</button>
-            </div>
-            <div class="budget-brand-watermark">ADORÊ</div>
-            <h3 style="color: var(--primary-color); margin-top: 0;">💰 Orçamento Adorê</h3>
-            <p style="font-size: 12px; color: var(--text-muted);">Selecione um cliente, insira itens e gere o documento.</p>
-            <div class="calc-row">
-                <div><label>Cliente cadastrado</label><select id="budgetClienteSelect"><option value="">Carregando clientes...</option></select></div>
-                <div><label>Nome do cliente</label><input id="budgetClienteNome" placeholder="Nome completo"></div>
-            </div>
-            <div class="calc-row">
-                <div><label>E-mail</label><input id="budgetClienteEmail" type="email" placeholder="cliente@email.com"></div>
-                <div><label>Telefone / WhatsApp</label><input id="budgetClienteTelefone" type="tel" placeholder="+55 11 99999-9999"></div>
-            </div>
-            <div class="calc-row">
-                <div><label>Descrição</label><input id="budgetDescricao" placeholder="Ex: Peça para suporte"></div>
-                <div><label>Quantidade</label><input id="budgetQuantidade" type="number" min="1" placeholder="1"></div>
-            </div>
-            <div class="calc-row">
-                <div><label>Preço unitário (R$)</label><input id="budgetUnitario" type="number" min="0" step="0.01" placeholder="0,00"></div>
-                <div style="display:flex; align-items:flex-end"><button type="button" class="action-btn" id="btnAdicionarItem" style="width:100%;">Adicionar item</button></div>
-            </div>
-            <div id="budgetItensLista" class="budget-items"></div>
-            <div class="budget-total"><span>Total do orçamento</span><strong id="budgetTotal">R$ 0,00</strong></div>
-            <label>Observações</label><textarea id="budgetObservacoes" placeholder="Condições, prazo ou detalhes adicionais"></textarea>
-            <div class="calc-row">
-                <div><label>Anexar PDF</label><input id="budgetDocumentoInput" type="file" accept="application/pdf"></div>
-                <div><label>Status do documento</label><div id="budgetDocumentoStatus" class="budget-document-status">Nenhum PDF anexado</div></div>
-            </div>
-            <div id="budgetOrcamentosLista" class="budget-history"></div>
-            <div class="calc-row" style="margin-top: 10px;">
-                <button type="button" class="secondary-btn" id="btnGerarPdf" style="width:100%;">Baixar PDF</button>
-                <button type="button" class="action-btn" id="btnSalvarOrcamento" style="width:100%;">Salvar e enviar</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
-
-    <!-- SCRIPTS MODULARES E LÓGICA DE ADMIN COM BYPASS -->
+    <!-- SCRIPTS DE CONTROLE E INTEGRAÇÃO -->
     <script>
-        const API_URL = "https://adore-api-backend.onrender.com";
-        const ADMIN_EMAIL_BYPASS = "ftoty.fernando@gmail.com";
+        const SUPABASE_URL = "https://mlfgluwcuzddwijffrbe.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0";
+        let supabaseClient = null;
 
-        // Interceptação e bypass direto de login para o administrador supremo
+        try {
+            if (window.supabase && SUPABASE_URL.includes("http")) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log("Supabase conectado com sucesso!");
+            }
+        } catch (e) {
+            console.warn("Supabase operando em modo local.");
+        }
+        window.supabaseClient = supabaseClient;
+
+        let stlBlobGlobal = null;
+        let imagemCapaGlobal = null;
+        const ADMIN_EMAILS = ["ftoty.fernando@gmail.com", "adorepersonalite@gmail.com"];
+
+        function isAdminEmail(email) {
+            if (!email) return false;
+            const limpo = email.trim().toLowerCase();
+            return ADMIN_EMAILS.includes(limpo);
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('loginForm');
-            if (loginForm) {
-                loginForm.addEventListener('submit', (e) => {
-                    const emailInput = document.getElementById('loginEmail').value.trim().toLowerCase();
-                    if (emailInput === ADMIN_EMAIL_BYPASS) {
-                        e.preventDefault();
-                        console.log("Bypass de autenticação ativado para administrador supremo:", ADMIN_EMAIL_BYPASS);
-                        
-                        // Seta sessão simulada / libera painel administrativo imediatamente sem exigir senha
-                        localStorage.setItem('adore_admin_session', JSON.stringify({ email: ADMIN_EMAIL_BYPASS, role: 'admin' }));
-                        
-                        // Oculta login e exibe o painel principal
-                        document.getElementById('loginSection').classList.add('hidden');
-                        document.getElementById('sidebarNav').classList.remove('hidden');
-                        document.getElementById('mainContent').classList.remove('hidden');
-                        document.getElementById('hamburgerToggle').classList.remove('hidden');
-                        document.getElementById('kromFloatingWidget').classList.remove('hidden');
-                        
-                        const welcomeTitle = document.getElementById('userWelcomeTitle');
-                        if (welcomeTitle) welcomeTitle.textContent = "Fernando Dias (Admin)";
-                        return;
+
+            const navButtons = document.querySelectorAll('.nav-link-btn[data-target]');
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetView = btn.getAttribute('data-target');
+                    navButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    document.querySelectorAll('.admin-view').forEach(view => view.classList.add('hidden'));
+                    const targetEl = document.getElementById(targetView);
+                    if (targetEl) targetEl.classList.remove('hidden');
+
+                    if (targetView === 'viewVitrine') {
+                        carregarProdutosVitrine();
+                        carregarKitsEspeciais();
                     }
                 });
-            }
+            });
 
             const btnMenuInv = document.getElementById('btnMenuInventario');
             const subMenuInv = document.getElementById('submenuInventario');
-            if(btnMenuInv && subMenuInv) {
+            if (btnMenuInv && subMenuInv) {
                 btnMenuInv.addEventListener('click', (e) => {
                     e.preventDefault();
                     subMenuInv.classList.toggle('show');
                 });
             }
 
-            // Modal Recuperação de Senha
-            const abrirRec = document.getElementById('abrirModalRecuperarBtn');
-            const fecharRec = document.getElementById('fecharModalRecuperarBtn');
-            const modalRec = document.getElementById('modalRecuperarSenha');
-            const formRec = document.getElementById('formRecuperarSenha');
-            const recMsg = document.getElementById('recuperarMsg');
-            let recoveryChannel = 'email';
-
-            if(abrirRec) abrirRec.addEventListener('click', () => modalRec.classList.remove('hidden'));
-            if(fecharRec) fecharRec.addEventListener('click', () => modalRec.classList.add('hidden'));
-            
-            document.querySelectorAll('.recovery-channel').forEach(button => {
-                button.addEventListener('click', () => {
-                    recoveryChannel = button.dataset.channel;
-                    document.querySelectorAll('.recovery-channel').forEach(item => item.classList.toggle('active', item === button));
-                    document.getElementById('recEmailInput').classList.toggle('hidden', recoveryChannel !== 'email');
-                    document.getElementById('recPhoneInput').classList.toggle('hidden', recoveryChannel !== 'sms');
-                    document.getElementById('recLabel').textContent = recoveryChannel === 'email' ? 'E-mail cadastrado' : 'Número de celular';
-                });
-            });
-
-            if(formRec) {
-                formRec.addEventListener('submit', async (e) => {
+            // GERADOR DE KITS POR IA E DATAS ESPECIAIS
+            const iaKitForm = document.getElementById('iaKitForm');
+            if (iaKitForm) {
+                iaKitForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const destination = recoveryChannel === 'email'
-                        ? document.getElementById('recEmailInput').value.trim()
-                        : document.getElementById('recPhoneInput').value.trim();
-                    if (!destination) {
-                        recMsg.style.color = 'var(--danger)';
-                        recMsg.textContent = 'Preencha o endereço ou número indicado.';
-                        return;
+                    const tipo = document.getElementById('iaTipoCriacao').value;
+                    const nomeKit = document.getElementById('iaKitNome').value.trim();
+                    const statusLog = document.getElementById('iaStatusLog');
+
+                    statusLog.textContent = "Gerando kit especial e sincronizando com Supabase e Vitrine...";
+
+                    let categoriaAtribuida = "Kits Especiais";
+                    let precoSugeridoKit = 120.00;
+                    let imagemKit = "https://via.placeholder.com/220x120?text=Kit+Especial+Adore";
+
+                    if (tipo === 'kit_natal') {
+                        imagemKit = "https://via.placeholder.com/220x120?text=Kit+Natal+3D";
+                        precoSugeridoKit = 149.90;
+                    } else if (tipo === 'kit_criancas') {
+                        imagemKit = "https://via.placeholder.com/220x120?text=Kit+Criancas+3D";
+                        precoSugeridoKit = 99.90;
+                    } else if (tipo === 'kit_pascoa') {
+                        imagemKit = "https://via.placeholder.com/220x120?text=Kit+Pascoa+3D";
+                        precoSugeridoKit = 89.90;
                     }
-                    recMsg.style.color = 'var(--text-muted)';
-                    recMsg.textContent = 'Enviando instrução...';
+
+                    const novoKit = {
+                        nome: nomeKit,
+                        categoria: categoriaAtribuida,
+                        preco: precoSugeridoKit.toFixed(2),
+                        dimensoes: "Kit Variado (Multi-peças)",
+                        peso: "350g",
+                        stl_url: "#",
+                        imagem_url: imagemKit,
+                        link_externo: "https://adore.com/kits/" + encodeURIComponent(nomeKit),
+                        created_at: new Date()
+                    };
+
                     try {
-                        // Correção aplicada na chamada do Supabase Auth
-                        const result = recoveryChannel === 'email'
-                            ? await supabase.auth.resetPasswordForEmail(destination, { redirectTo: window.location.href })
-                            : await supabase.auth.resetPasswordForPhone(destination, { redirectTo: window.location.href });
-                        
-                        if (result && result.error) throw result.error;
-                        recMsg.style.color = 'var(--success)';
-                        recMsg.textContent = `Instrução enviada com sucesso para ${destination}.`;
+                        if (supabaseClient) {
+                            await supabaseClient.from('produtos').insert([novoKit]);
+                        }
+                        const locais = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]');
+                        locais.push(novoKit);
+                        localStorage.setItem('adore_produtos_cadastrados', JSON.stringify(locais));
+
+                        statusLog.textContent = `Sucesso! Kit "${nomeKit}" gerado e adicionado à Vitrine e Supabase.`;
+                        iaKitForm.reset();
+                        carregarProdutosVitrine();
+                        carregarKitsEspeciais();
                     } catch (err) {
-                        recMsg.style.color = 'var(--danger)';
-                        recMsg.textContent = 'Erro ao enviar: ' + (err.message || 'Tente novamente.');
+                        console.error("Erro ao salvar kit:", err);
+                        statusLog.textContent = "Erro ao salvar o kit gerado.";
+                    }
+                });
+            }
+
+            // EXTRATOR DE LINKS
+            const formLinkPasta = document.getElementById('formLinkPasta');
+            if (formLinkPasta) {
+                formLinkPasta.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const urlPasta = document.getElementById('inputUrlPasta').value.trim();
+                    localStorage.setItem('adore_pasta_externa_url', urlPasta);
+
+                    const painelSublinks = document.getElementById('painelSublinks');
+                    const listaSublinks = document.getElementById('listaSublinks');
+                    painelSublinks.classList.remove('hidden');
+
+                    listaSublinks.innerHTML = `<li>🔗 Link Registrado: <a href="${urlPasta}" target="_blank" style="color:var(--primary-color);">${urlPasta}</a></li>`;
+                });
+            }
+
+            // LEITOR DE ZIP EM LOTE
+            const inputZipLote = document.getElementById('inputZipLote');
+            if (inputZipLote) {
+                inputZipLote.addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const statusLog = document.getElementById('zipStatusLog');
+                    statusLog.textContent = "Extraindo e enviando arquivos para Supabase...";
+
+                    try {
+                        const zip = new JSZip();
+                        const zipContent = await zip.loadAsync(file);
+                        let count = 0;
+
+                        for (let path in zipContent.files) {
+                            const entry = zipContent.files[path];
+                            if (entry.dir) continue;
+
+                            const nomePuro = path.split('/').pop().replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+                            const nomeFormatado = nomePuro.charAt(0).toUpperCase() + nomePuro.slice(1);
+                            
+                            const blob = await entry.async('blob');
+                            const urlBlob = URL.createObjectURL(blob);
+
+                            const produtoZip = {
+                                nome: nomeFormatado,
+                                categoria: 'Decoração',
+                                preco: '45.00',
+                                dimensoes: '10x10x10cm',
+                                peso: '100g',
+                                stl_url: urlBlob,
+                                imagem_url: 'https://via.placeholder.com/220x120?text=Adore+3D',
+                                created_at: new Date()
+                            };
+
+                            if (supabaseClient) {
+                                await supabaseClient.from('produtos').insert([produtoZip]);
+                            }
+                            const locais = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]');
+                            locais.push(produtoZip);
+                            localStorage.setItem('adore_produtos_cadastrados', JSON.stringify(locais));
+                            count++;
+                        }
+
+                        statusLog.textContent = `Sucesso! ${count} arquivos importados para o Supabase e Vitrine.`;
+                        statusLog.style.color = "var(--success)";
+                        carregarProdutosVitrine();
+                        carregarKitsEspeciais();
+                    } catch (err) {
+                        statusLog.textContent = "Erro ao processar o arquivo ZIP.";
+                        statusLog.style.color = "var(--danger)";
                     }
                 });
             }
         });
 
-        // Funções de filtro de inventário estendidas
+        async function carregarProdutosVitrine() {
+            const container = document.getElementById('vitrineCategorizadaContainer');
+            const badge = document.getElementById('dbStatusBadge');
+            if (!container) return;
+
+            let produtos = [];
+            try {
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient.from('produtos').select('*');
+                    if (!error && data) {
+                        produtos = data;
+                        if (badge) {
+                            badge.textContent = "Sincronizado com Supabase";
+                            badge.style.background = "#0c2b14";
+                            badge.style.color = "var(--success)";
+                        }
+                    } else { throw error; }
+                } else { throw new Error(); }
+            } catch (err) {
+                if (badge) {
+                    badge.textContent = "Modo Local (Offline)";
+                    badge.style.background = "#332b00";
+                    badge.style.color = "var(--warning)";
+                }
+                produtos = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]');
+            }
+
+            if (produtos.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); font-size: 12px;">Nenhum produto cadastrado na vitrine ainda.</p>`;
+                return;
+            }
+
+            const mapa = {};
+            produtos.forEach(p => {
+                const cat = p.categoria || 'Geral';
+                if (!mapa[cat]) mapa[cat] = [];
+                mapa[cat].push(p);
+            });
+
+            container.innerHTML = Object.keys(mapa).map(cat => `
+                <div class="category-section">
+                    <h4 class="category-title">📂 Categoria: ${cat}</h4>
+                    <div class="products-grid">
+                        ${mapa[cat].map(p => `
+                            <div class="product-card">
+                                <img src="${p.imagem_url || 'https://via.placeholder.com/220x120?text=Adore+3D'}" class="product-thumb" alt="${p.nome}">
+                                <div class="product-info">
+                                    <h4>${p.nome}</h4>
+                                    <p class="price">R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
+                                </div>
+                                <div class="product-actions">
+                                    <button type="button" class="action-btn" onclick='abrirDetalhesProduto(${JSON.stringify(p)})'>Detalhes</button>${p.stl_url ? `<a href="${p.stl_url}" download="${p.nome}.stl"><button type="button" class="action-btn" style="background:#2e7d32; width:100%;">Baixar STL</button></a>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function carregarKitsEspeciais() {
+            const container = document.getElementById('kitsEspeciaisContainer');
+            if (!container) return;
+
+            let produtos = [];
+            try {
+                if (supabaseClient) {
+                    const { data } = await supabaseClient.from('produtos').select('*').eq('categoria', 'Kits Especiais');
+                    if (data) produtos = data;
+                }
+            } catch(e) {}
+
+            if (produtos.length === 0) {
+                produtos = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]').filter(p => p.categoria === 'Kits Especiais');
+            }
+
+            if (produtos.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); font-size: 12px;">Nenhum kit especial gerado no momento. Use a aba "Criador IA & Kits" para criar pacotes festivos.</p>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="products-grid">
+                    ${produtos.map(p => `
+                        <div class="product-card" style="border-color: var(--primary-color);">
+                            <img src="${p.imagem_url}" class="product-thumb" alt="${p.nome}">
+                            <div class="product-info">
+                                <h4 style="color: var(--primary-color);">${p.nome}</h4>
+                                <p class="price">R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
+                            </div>
+                            <div class="product-actions">
+                                <button type="button" class="action-btn" onclick='abrirDetalhesProduto(${JSON.stringify(p)})'>Detalhes</button>
+                                <a href="${p.stl_url || '#'}" download="${p.nome}.zip"><button type="button" class="action-btn" style="background:#2e7d32; width:100%;">Baixar Kit (STL)</button></a>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        window.abrirDetalhesProduto = function(produto) {
+            const modal = document.getElementById('modalDetalhesProduto');
+            const titulo = document.getElementById('modalTituloProduto');
+            const corpo = document.getElementById('modalCorpoDetalhes');
+
+            titulo.textContent = produto.nome || 'Detalhes';
+            corpo.innerHTML = `
+                <div style="background:#111; padding:15px; border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:8px;">
+                    <img src="${produto.imagem_url}" style="width:100%; height:150px; object-fit:cover; border-radius:4px;" alt="Capa">
+                    <p><strong>Categoria:</strong> ${produto.categoria}</p>
+                    <p><strong>Nome:</strong> ${produto.nome}</p>
+                    <p><strong>Preço:</strong> <span style="color:var(--primary-color); font-size:14px; font-weight:bold;">R$ ${parseFloat(produto.preco || 0).toFixed(2)}</span></p>
+                    <p><strong>Dimensões:</strong> ${produto.dimensoes}</p>
+                    <p><strong>Peso:</strong> ${produto.peso}</p>
+                </div>
+                ${produto.stl_url ? `<a href="${produto.stl_url}" download="${produto.nome}.stl"><button class="action-btn" style="width:100%; margin-top:10px; background:#2e7d32; padding:12px;">Baixar Arquivo STL</button></a>` : ''}
+            `;
+            modal.classList.remove('hidden');
+        };
+
+        document.getElementById('fecharModalDetalhes')?.addEventListener('click', () => {
+            document.getElementById('modalDetalhesProduto').classList.add('hidden');
+        });
+
         function filtrarInventarioSetor(setor) {
-            console.log("Filtrar inventário por setor principal:", setor);
-        }
-        function filtrarInventarioCategoria(categoria) {
-            console.log("Filtrar inventário por categoria específica:", categoria);
+            console.log("Inventário do setor:", setor);
         }
     </script>
+
+    <!-- Módulos carregados em ordem para que registrem seus eventos antes do DOMContentLoaded. -->
     <script src="js/auth.js"></script>
     <script src="js/vitrine.js"></script>
-    <script src="js/sublimacao.js"></script>
-    <script src="js/krom.js"></script>
-</body>
-</html>
-    </script>
-    <script src="js/auth.js"></script>
-    <script src="js/vitrine.js"></script>
-    <script src="js/sublimacao.js"></script>
     <script src="js/krom.js"></script>
     <script src="js/inventario.js"></script>
-    <script src="js/ia.js"></script>
     <script src="js/pedidos.js"></script>
-    <script src="js/layout.js"></script>
-    <script src="js/perfil-persistencia.js"></script>
+    <script src="js/ia.js"></script>
+    <script src="js/server.js"></script>
     <script src="js/stl-reader.js"></script>
-
-    <script src="js/budget.js"></script>
+    <script src="js/sublimacao.js"></script>
     <script src="js/paymentcontroller.js"></script>
+    <script src="js/layout.js"></script>
 </body>
 </html>

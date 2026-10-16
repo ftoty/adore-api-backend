@@ -1,11 +1,11 @@
 window.categoriaAtual = 'todos';
 
-document.getElementById('hamburgerToggle').addEventListener('click', () => {
+document.getElementById('hamburgerToggle')?.addEventListener('click', () => {
     document.getElementById('sidebarNav').classList.toggle('collapsed');
     document.getElementById('mainContent').classList.toggle('full');
 });
 
-document.getElementById('adminToggleHeader').addEventListener('click', () => {
+document.getElementById('adminToggleHeader')?.addEventListener('click', () => {
     document.getElementById('adminControlsPanel').classList.toggle('show');
 });
 
@@ -16,24 +16,26 @@ document.querySelectorAll('.nav-link-btn').forEach(btn => {
 
         const targetViewId = btn.getAttribute('data-target');
         document.querySelectorAll('.admin-view').forEach(view => view.classList.add('hidden'));
-        document.getElementById(targetViewId).classList.remove('hidden');
+        document.getElementById(targetViewId)?.classList.remove('hidden');
 
         if(targetViewId === 'viewVitrine') {
-            document.getElementById('subcategoriasSecao').style.display = 'block';
+            const subcategoriasSecao = document.getElementById('subcategoriasSecao');
+            if (subcategoriasSecao) subcategoriasSecao.style.display = 'block';
         } else {
-            document.getElementById('subcategoriasSecao').style.display = 'none';
+            const subcategoriasSecao = document.getElementById('subcategoriasSecao');
+            if (subcategoriasSecao) subcategoriasSecao.style.display = 'none';
         }
     });
 });
 
-document.getElementById('pickerPrimary').addEventListener('input', (e) => {
+document.getElementById('pickerPrimary')?.addEventListener('input', (e) => {
     const cor = e.target.value;
     document.documentElement.style.setProperty('--primary-color', cor);
     document.documentElement.style.setProperty('--primary-hover', cor);
 });
 
 // Calculadora 3D
-document.getElementById('btnCalcular').addEventListener('click', () => {
+document.getElementById('btnCalcular')?.addEventListener('click', () => {
     const peso = parseFloat(document.getElementById('calcPeso').value) || 0;
     const precoKg = parseFloat(document.getElementById('calcPrecoKg').value) || 0;
     const horas = parseFloat(document.getElementById('calcHoras').value) || 0;
@@ -50,7 +52,7 @@ document.getElementById('btnCalcular').addEventListener('click', () => {
     if(typeof dispararSugestaoKrom === 'function') dispararSugestaoKrom('calculo');
 });
 
-document.getElementById('btnUsarPreco').addEventListener('click', () => {
+document.getElementById('btnUsarPreco')?.addEventListener('click', () => {
     if (window.precoCalculado) {
         document.getElementById('preco').value = window.precoCalculado;
     } else {
@@ -160,16 +162,21 @@ const formProduto = document.getElementById('produtoForm');
 if(formProduto) {
     formProduto.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData();
-        formData.append('nome', document.getElementById('nome').value);
-        formData.append('preco', document.getElementById('preco').value);
-        formData.append('link_externo', document.getElementById('link_externo').value);
-        formData.append('categoria', document.getElementById('categoriaInput').value || 'Geral');
-        
-        const imagemInput = document.getElementById('imagem').files[0];
-        if (imagemInput) formData.append('imagem', imagemInput);
 
-        const stlInput = document.getElementById('stl').files[0];
+        const nomeInput = document.getElementById('produtoNome') || document.getElementById('nome');
+        const precoInput = document.getElementById('preco');
+        const categoriaInput = document.getElementById('categoriaInput');
+        const linkExternoInput = document.getElementById('link_externo');
+        const imagemInput = document.getElementById('imagem')?.files?.[0];
+        const stlInput = document.getElementById('inputArquivoStl')?.files?.[0] || document.getElementById('stl')?.files?.[0];
+
+        const formData = new FormData();
+        formData.append('nome', (nomeInput?.value || '').trim() || 'Produto 3D');
+        formData.append('preco', precoInput?.value || '0');
+        formData.append('link_externo', linkExternoInput?.value || '');
+        formData.append('categoria', categoriaInput?.value || 'Geral');
+
+        if (imagemInput) formData.append('imagem', imagemInput);
         if (stlInput) formData.append('stl', stlInput);
 
         document.getElementById('resultado').innerText = "Salvando produto...";
