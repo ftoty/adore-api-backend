@@ -1,1 +1,6 @@
-﻿{`n  "dependencies": {`n    "three": "0.128.0",`n    "three-csg-ts": "^3.1.2"`n  }`n}
+﻿{
+  "dependencies": {
+    "three": "0.128.0",
+    "three-csg-ts": "^3.1.2"
+  }
+}
