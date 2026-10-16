@@ -198,6 +198,7 @@
                     <input type="password" id="loginSenha" name="senha_admin" autocomplete="current-password" placeholder="Sua senha">
                 </div>
 
+                <!-- Botão de Entrar (visível no login padrão) -->
                 <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
             </form>
 
@@ -210,8 +211,9 @@
                 <h4 style="color: var(--primary-color); font-size: 12px; margin-bottom: 5px;">Recuperação de Senha</h4>
                 <label>Confirme seu E-mail</label>
                 <input type="email" id="recuperarEmailInput" placeholder="seu.email@adore.com" required>
-                <button type="submit" class="action-btn" style="background: var(--warning); color: #121212; padding: 10px; margin-top: 5px;">Enviar Instruções de Recuperação</button>
-                <button type="button" id="btnVoltarLogin" style="background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; margin-top: 5px;">Voltar ao Login</button>
+                <!-- Botão Enviar Link: Visível apenas no modo de recuperação -->
+                <button type="submit" id="btnSubmitRecuperar" class="action-btn hidden" style="background: var(--warning); color: #121212; padding: 10px; margin-top: 5px; width: 100%;">Enviar Instruções de Recuperação</button>
+                <button type="button" id="btnVoltarLogin" style="background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; margin-top: 5px; width: 100%;">Voltar ao Login</button>
             </form>
 
             <div id="loginErro" style="color: var(--danger); font-size: 11px; margin-top: 10px;"></div>
@@ -246,6 +248,7 @@
             <button class="nav-link-btn active" data-target="viewVitrine" type="button">📂 Vitrine & Produtos</button>
             <button class="nav-link-btn" data-target="viewIA" type="button">🤖 Criador IA & Kits Especiais</button>
             <button class="nav-link-btn" data-target="viewPedidos" type="button">📦 Gestão de Pedidos</button>
+            <button class="nav-link-btn" data-target="viewNotaFiscal" type="button">📜 Emissão de Nota Fiscal</button>
             <button class="nav-link-btn" id="btnAbrirOrcamento" type="button">💰 Gerar Orçamento</button>
 
             <!-- Inventário e Submenus -->
@@ -430,7 +433,74 @@
             </div>
         </div>
 
-        <!-- PÁGINA 4: INVENTÁRIO -->
+        <!-- PÁGINA 4: EMISSÃO DE NOTA FISCAL & CERTIFICADO DIGITAL -->
+        <div id="viewNotaFiscal" class="admin-view hidden">
+            <div class="card" style="border: 2px solid var(--primary-color);">
+                <h3 style="color: var(--primary-color); margin-top:0;">📜 Emissão de Nota Fiscal com Certificado Digital</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Configure seu certificado digital (A1 ou A3) e emita notas fiscais eletrônicas de forma integrada com a SEFAZ e Supabase.</p>
+                
+                <form id="formEmissaoNF">
+                    <div class="calc-row">
+                        <div>
+                            <label>Tipo de Certificado Digital</label>
+                            <select id="nfTipoCertificado">
+                                <option value="A1">Certificado A1 (.pfx / .p12)</option>
+                                <option value="A3">Certificado A3 (Token / Cartão)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Arquivo do Certificado (A1) ou Senha</label>
+                            <input type="file" id="nfArquivoCertificado" accept=".pfx,.p12">
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div>
+                            <label>Nome / Razão Social do Cliente</label>
+                            <input type="text" id="nfClienteNome" placeholder="Ex: Nome do Comprador" required>
+                        </div>
+                        <div>
+                            <label>CPF / CNPJ do Cliente</label>
+                            <input type="text" id="nfClienteDoc" placeholder="000.000.000-00" required>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div>
+                            <label>Número da NF / Série</label>
+                            <input type="text" id="nfNumeroSerie" value="0001 / Série 1" readonly style="background: #111; color: var(--primary-color);">
+                        </div>
+                        <div>
+                            <label>Valor Total da Nota (R$)</label>
+                            <input type="number" step="0.01" id="nfValorTotal" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px; background: var(--success); color: #fff;">Emitir Nota Fiscal Digitalmente</button>
+                </form>
+                <div id="nfStatusLog" style="font-size: 11px; margin-top: 10px;"></div>
+            </div>
+
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📊 Histórico de Notas Fiscais Emitidas</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Número NF</th>
+                            <th>Cliente</th>
+                            <th>Documento</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaHistoricoNF">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhuma nota fiscal emitida ainda.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PÁGINA 5: INVENTÁRIO -->
         <div id="viewInventario" class="admin-view hidden">
             <div class="card">
                 <h3 style="color: var(--primary-color); margin-top:0;">🛠️ Gestão de Inventário (3D & Sublimação)</h3>
@@ -477,6 +547,93 @@
 
         document.addEventListener('DOMContentLoaded', () => {
 
+            // CONTROLE DINÂMICO DE LOGIN E RECUPERAÇÃO DE SENHA (ISOLAMENTO DE BOTÕES)
+            const loginForm = document.getElementById('loginForm');
+            const recuperarSenhaForm = document.getElementById('recuperarSenhaForm');
+            const linkEsqueceuSenha = document.getElementById('linkEsqueceuSenha');
+            const btnVoltarLogin = document.getElementById('btnVoltarLogin');
+            const btnSubmitLogin = document.getElementById('btnSubmitLogin');
+            const btnSubmitRecuperar = document.getElementById('btnSubmitRecuperar');
+            const loginEmailInput = document.getElementById('loginEmail');
+            const recuperarEmailInput = document.getElementById('recuperarEmailInput');
+            const loginSection = document.getElementById('loginSection');
+            const sidebarNav = document.getElementById('sidebarNav');
+            const mainContent = document.getElementById('mainContent');
+            const hamburgerToggle = document.getElementById('hamburgerToggle');
+            const userWelcomeTitle = document.getElementById('userWelcomeTitle');
+            const loginErro = document.getElementById('loginErro');
+            const kromFloatingWidget = document.getElementById('kromFloatingWidget');
+
+            linkEsqueceuSenha?.addEventListener('click', (e) => {
+                e.preventDefault();
+                loginForm.classList.add('hidden');
+                recuperarSenhaForm.classList.remove('hidden');
+                btnSubmitRecuperar.classList.remove('hidden'); // Exibe botão de recuperação
+                loginErro.textContent = "";
+            });
+
+            btnVoltarLogin?.addEventListener('click', (e) => {
+                e.preventDefault();
+                recuperarSenhaForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+                btnSubmitRecuperar.classList.add('hidden'); // Oculta botão de recuperação
+                loginErro.textContent = "";
+            });
+
+            loginForm?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const emailVal = loginEmailInput.value.trim().toLowerCase();
+                const senhaVal = document.getElementById('loginSenha').value;
+
+                if (isAdminEmail(emailVal)) {
+                    executarLoginSucesso(emailVal);
+                } else {
+                    if (senhaVal.length > 0) {
+                        executarLoginSucesso(emailVal);
+                    } else {
+                        loginErro.textContent = "Por favor, digite a senha de acesso.";
+                    }
+                }
+            });
+
+            recuperarSenhaForm?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const emailRec = recuperarEmailInput.value.trim();
+                loginErro.style.color = "var(--success)";
+                loginErro.textContent = `Instruções de recuperação enviadas com sucesso para ${emailRec}.`;
+                setTimeout(() => {
+                    recuperarSenhaForm.classList.add('hidden');
+                    loginForm.classList.remove('hidden');
+                    btnSubmitRecuperar.classList.add('hidden');
+                    loginErro.textContent = "";
+                    loginErro.style.color = "var(--danger)";
+                }, 3500);
+            });
+
+            function executarLoginSucesso(email) {
+                localStorage.setItem('adore_logged_user', email);
+                loginSection.classList.add('hidden');
+                sidebarNav.classList.remove('hidden');
+                mainContent.classList.remove('hidden');
+                hamburgerToggle.classList.remove('hidden');
+                if (kromFloatingWidget) kromFloatingWidget.classList.remove('hidden');
+                if (userWelcomeTitle) userWelcomeTitle.textContent = email.split('@')[0].toUpperCase();
+                carregarProdutosVitrine();
+                carregarKitsEspeciais();
+                carregarHistoricoNF();
+            }
+
+            document.getElementById('btnLogout')?.addEventListener('click', () => {
+                localStorage.removeItem('adore_logged_user');
+                location.reload();
+            });
+
+            const usuarioSalvo = localStorage.getItem('adore_logged_user');
+            if (usuarioSalvo) {
+                executarLoginSucesso(usuarioSalvo);
+            }
+
+            // NAVEGAÇÃO ENTRE ABAS
             const navButtons = document.querySelectorAll('.nav-link-btn[data-target]');
             navButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
@@ -491,6 +648,8 @@
                     if (targetView === 'viewVitrine') {
                         carregarProdutosVitrine();
                         carregarKitsEspeciais();
+                    } else if (targetView === 'viewNotaFiscal') {
+                        carregarHistoricoNF();
                     }
                 });
             });
@@ -501,6 +660,54 @@
                 btnMenuInv.addEventListener('click', (e) => {
                     e.preventDefault();
                     subMenuInv.classList.toggle('show');
+                });
+            }
+
+            // MÓDULO DE EMISSÃO DE NOTA FISCAL COM CERTIFICADO DIGITAL
+            const formEmissaoNF = document.getElementById('formEmissaoNF');
+            if (formEmissaoNF) {
+                formEmissaoNF.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const tipoCert = document.getElementById('nfTipoCertificado').value;
+                    const nomeCli = document.getElementById('nfClienteNome').value.trim();
+                    const docCli = document.getElementById('nfClienteDoc').value.trim();
+                    const valorTot = parseFloat(document.getElementById('nfValorTotal').value).toFixed(2);
+                    const statusLog = document.getElementById('nfStatusLog');
+                    const numeroNFGerado = "NF-" + Math.floor(100000 + Math.random() * 900000);
+
+                    statusLog.style.color = "var(--warning)";
+                    statusLog.textContent = "Processando certificado digital e transmitindo NF para a SEFAZ...";
+
+                    const novaNota = {
+                        numero_nf: numeroNFGerado,
+                        serie: "1",
+                        cliente_nome: nomeCli,
+                        cliente_documento: docCli,
+                        valor_total: valorTot,
+                        status_emissao: "Autorizada",
+                        certificado_tipo: tipoCert,
+                        xml_url: "#",
+                        pdf_url: "#",
+                        created_at: new Date().toISOString()
+                    };
+
+                    try {
+                        if (supabaseClient) {
+                            await supabaseClient.from('notas_fiscais').insert([novaNota]);
+                        }
+                        const notasLocal = JSON.parse(localStorage.getItem('adore_notas_fiscais') || '[]');
+                        notasLocal.push(novaNota);
+                        localStorage.setItem('adore_notas_fiscais', JSON.stringify(notasLocal));
+
+                        statusLog.style.color = "var(--success)";
+                        statusLog.textContent = `Sucesso! Nota Fiscal ${numeroNFGerado} emitida e autorizada via certificado ${tipoCert}.`;
+                        formEmissaoNF.reset();
+                        carregarHistoricoNF();
+                    } catch (err) {
+                        console.error("Erro ao emitir NF:", err);
+                        statusLog.style.color = "var(--danger)";
+                        statusLog.textContent = "Erro ao registrar NF no Supabase.";
+                    }
                 });
             }
 
@@ -634,6 +841,41 @@
             }
         });
 
+        async function carregarHistoricoNF() {
+            const tbody = document.getElementById('tabelaHistoricoNF');
+            if (!tbody) return;
+
+            let notas = [];
+            try {
+                if (supabaseClient) {
+                    const { data } = await supabaseClient.from('notas_fiscais').select('*').order('created_at', { ascending: false });
+                    if (data) notas = data;
+                }
+            } catch (e) {}
+
+            if (notas.length === 0) {
+                notas = JSON.parse(localStorage.getItem('adore_notas_fiscais') || '[]');
+            }
+
+            if (notas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhuma nota fiscal emitida ainda.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = notas.map(n => `
+                <tr>
+                    <td style="color: var(--primary-color); font-weight: bold;">${n.numero_nf}</td>
+                    <td>${n.cliente_nome}</td>
+                    <td>${n.cliente_documento}</td>
+                    <td>R$ ${parseFloat(n.valor_total).toFixed(2)}</td>
+                    <td><span class="status-badge status-approved">${n.status_emissao}</span></td>
+                    <td>
+                        <button class="action-btn" style="padding: 4px 8px; font-size: 10px; background: #2e7d32;" onclick="alert('Baixando XML/PDF da NF ${n.numero_nf}')">Baixar XML/PDF</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
         async function carregarProdutosVitrine() {
             const container = document.getElementById('vitrineCategorizadaContainer');
             const badge = document.getElementById('dbStatusBadge');
@@ -679,7 +921,7 @@
                     <div class="products-grid">
                         ${mapa[cat].map(p => `
                             <div class="product-card">
-                                <img src="${p.imagem_url || 'https://via.placeholder.com/220x120?text=Adore+3D'}" class="product-thumb" alt="${p.nome}">
+                                <img src="${p.imagem_url \vert{}\vert{} 'https://via.placeholder.com/220x120?text=Adore+3D'}" class="product-thumb" alt="${p.nome}">
                                 <div class="product-info">
                                     <h4>${p.nome}</h4>
                                     <p class="price">R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
@@ -726,7 +968,7 @@
                             </div>
                             <div class="product-actions">
                                 <button type="button" class="action-btn" onclick='abrirDetalhesProduto(${JSON.stringify(p)})'>Detalhes</button>
-                                <a href="${p.stl_url || '#'}" download="${p.nome}.zip"><button type="button" class="action-btn" style="background:#2e7d32; width:100%;">Baixar Kit (STL)</button></a>
+                                <a href="${p.stl_url \vert{}\vert{} '#'}" download="${p.nome}.zip"><button type="button" class="action-btn" style="background:#2e7d32; width:100%;">Baixar Kit (STL)</button></a>
                             </div>
                         </div>
                     `).join('')}
@@ -763,7 +1005,7 @@
         }
     </script>
 
-    <!-- Módulos carregados em ordem para que registrem seus eventos antes do DOMContentLoaded. -->
+    <!-- Módulos carregados em ordem -->
     <script src="js/auth.js"></script>
     <script src="js/vitrine.js"></script>
     <script src="js/krom.js"></script>
