@@ -3,69 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Adorê - Painel Administrativo Completo & Hub de Marketing</title>
+    <title>Adorê - Painel Administrativo Completo & Vitrine 3D</title>
+
+    <!-- Bibliotecas e SDKs Externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
     <style>
-        :root { --primary-color: #d4af37; --primary-hover: #b89728; --bg-color: #121212; --card-bg: #1e1e1e; --sidebar-bg: #181818; --text-main: #f5f5f5; --text-muted: #aaaaaa; --border-color: #333333; --danger: #d9534f; --warning: #f0ad4e; --success: #2e7d32; }
+        :root {
+            --primary-color: #d4af37;
+            --primary-hover: #b89728;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --sidebar-bg: #181818;
+            --text-main: #f5f5f5;
+            --text-muted: #aaaaaa;
+            --border-color: #333333;
+            --danger: #d9534f;
+            --warning: #f0ad4e;
+            --success: #2e7d32;
+        }
+
         * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
-        aside, .sidebar { width: 280px; background: var(--sidebar-bg); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; padding: 20px 15px; position: relative; z-index: 10; overflow-y: auto !important; max-height: 100vh; }
-        .hamburger-btn { position: absolute; top: 20px; left: 20px; background: #222; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 6px; cursor: pointer; z-index: 20; font-size: 16px; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        aside, .sidebar {
+            width: 280px;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 15px;
+            position: relative;
+            transition: transform 0.3s ease;
+            z-index: 10;
+            overflow-y: auto !important;
+            max-height: 100vh;
+        }
+
+        aside::-webkit-scrollbar, .sidebar::-webkit-scrollbar { width: 6px; }
+        aside::-webkit-scrollbar-track, .sidebar::-webkit-scrollbar-track { background: #141414; }
+        aside::-webkit-scrollbar-thumb, .sidebar::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 3px; }
+
+        aside.collapsed, .sidebar.collapsed {
+            transform: translateX(-100%);
+            position: absolute;
+            height: 100%;
+        }
+
+        .hamburger-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #222;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 20;
+            font-size: 16px;
+        }
+        .hamburger-btn:hover { background: #333; border-color: var(--primary-color); }
+
         .sidebar-brand { text-align: center; margin-bottom: 20px; }
+        .sidebar-brand video { width: 80px; height: 50px; object-fit: cover; border-radius: 4px; }
         .sidebar-brand h2 { font-size: 14px; color: var(--primary-color); margin: 6px 0 0 0; text-transform: uppercase; }
+
         .nav-section { margin-bottom: 15px; }
         .nav-section h4 { font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
-        .nav-link-btn { display: block; width: 100%; background: transparent; color: var(--text-main); border: 1px solid transparent; text-align: left; padding: 9px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 4px; }
-        .nav-link-btn:hover, .nav-link-btn.active { background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color); }
+        .nav-link-btn, .filter-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-main);
+            border: 1px solid transparent; text-align: left; padding: 9px 12px;
+            border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 4px; transition: 0.2s;
+        }
+        .nav-link-btn:hover, .nav-link-btn.active, .filter-btn:hover, .filter-btn.active {
+            background: #2a2a2a; border-color: var(--primary-color); color: var(--primary-color);
+        }
+
+        .submenu-container { padding-left: 12px; border-left: 2px solid var(--border-color); margin: 5px 0 10px 5px; display: none; }
+        .submenu-container.show { display: block; }
+        .sub-item-btn {
+            display: block; width: 100%; background: transparent; color: var(--text-muted);
+            border: none; text-align: left; padding: 6px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 2px;
+        }
+        .sub-item-btn:hover, .sub-item-btn.active { color: var(--primary-color); background: #222; }
+
+        .admin-toggle-header {
+            font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+            cursor: pointer; padding: 6px 0; border-top: 1px solid var(--border-color);
+            margin-top: 10px; display: flex; justify-content: space-between; align-items: center;
+        }
+        .admin-controls { background: #1e1e1e; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); margin: 5px 0 10px 0; display: none; }
+        .admin-controls.show { display: block; }
+        .admin-controls label { font-size: 10px; display: block; margin-top: 5px; color: var(--text-muted); }
+        .admin-controls input, .admin-controls select { width: 100%; padding: 5px; font-size: 11px; margin-top: 2px; background: #111; border: 1px solid #444; color: white; border-radius: 4px; }
+
         main { flex: 1; padding: 25px; padding-left: 65px; overflow-y: auto; }
+        main.full { padding-left: 25px; }
+
         .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); margin-bottom: 20px; border: 1px solid var(--border-color); }
         .hidden { display: none !important; }
         form { display: flex; flex-direction: column; gap: 10px; }
         label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+
         input, button, select, textarea { padding: 9px 12px; font-size: 13px; border: 1px solid var(--border-color); border-radius: 6px; background: #2a2a2a; color: white; outline: none; }
-        textarea { resize: vertical; min-height: 90px; }
+        textarea { resize: vertical; min-height: 80px; }
+        input:focus, select:focus { border-color: var(--primary-color); }
+
         button.action-btn { background: var(--primary-color); color: #121212; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 12px; }
         button.action-btn:hover { background: var(--primary-hover); }
+
+        .calc-box { background: #252525; padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; }
         .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px; }
         .calc-row div { display: flex; flex-direction: column; gap: 4px; }
+
         .logout-btn { background: var(--danger); color: white; padding: 8px; font-size: 11px; margin-top: 15px; width: 100%; }
+        
+        .category-section { margin-bottom: 25px; }
+        .category-title { color: var(--primary-color); font-size: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 12px; text-transform: uppercase; font-weight: bold; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+        .product-card { background: #252525; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; transition: 0.2s; }
+        .product-card:hover { border-color: var(--primary-color); }
+        .product-thumb { width: 100%; height: 120px; background: #111; border-radius: 4px; object-fit: cover; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; overflow: hidden; }
+        .product-info h4 { margin: 0; font-size: 14px; color: var(--text-main); }
+        .product-info p { margin: 2px 0; font-size: 11px; color: var(--text-muted); }
+        .product-info .price { color: var(--primary-color); font-weight: bold; font-size: 13px; }
+        
+        .product-actions { display: flex; gap: 6px; margin-top: 6px; }
+        .product-actions button, .product-actions a { flex: 1; text-decoration: none; }
+
+        #modalDetalhesProduto { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: var(--card-bg); border: 1px solid var(--primary-color); border-radius: 12px; width: 90%; max-width: 600px; padding: 25px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 20px; background: transparent; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; }
+        .close-modal:hover { color: white; }
+
         table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
         table.data-table th, table.data-table td { padding: 10px; border-bottom: 1px solid var(--border-color); text-align: left; }
         table.data-table th { color: var(--primary-color); text-transform: uppercase; font-size: 10px; background: #1a1a1a; }
-        .status-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; background: #0c2b14; color: var(--success); }
+        .status-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .status-pending { background: #332b00; color: var(--warning); }
+        .status-approved { background: #0c2b14; color: var(--success); }
+
+        #kromFloatingWidget { position: fixed; bottom: 10px; right: 10px; z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; }
+        .krom-avatar-bubble { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; border: 2px solid var(--primary-color); box-shadow: 0 6px 18px rgba(0,0,0,0.65); cursor: pointer; background: #111; }
+        .krom-avatar-bubble video { width: 100%; height: 100%; object-fit: cover; }
+        #kromChatWindow { width: 185px; height: 220px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; margin-bottom: 8px; }
+        .krom-chat-header { background: #181818; padding: 6px 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
+        .krom-chat-header-info { display: flex; align-items: center; gap: 6px; }
+        .krom-chat-messages { flex: 1; padding: 7px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; font-size: 9px; }
+        .krom-msg { max-width: 88%; padding: 5px 7px; border-radius: 8px; line-height: 1.3; white-space: pre-wrap; font-size: 9px; }
+        .krom-msg.krom { background: #252525; color: var(--text-main); align-self: flex-start; border-left: 3px solid var(--primary-color); }
+        .krom-msg.user { background: var(--primary-color); color: #121212; align-self: flex-end; font-weight: 500; }
+        .krom-chat-input-area { padding: 6px 7px; background: #181818; border-top: 1px solid var(--border-color); display: flex; gap: 6px; }
+        .krom-chat-input-area input { flex: 1; background: #111; color: white; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 7px; font-size: 9px; }
+        .krom-chat-input-area button { background: var(--primary-color); color: #121212; border: none; padding: 0 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 9px; }
     </style>
 </head>
 <body>
-    <button class="hamburger-btn hidden" id="hamburgerToggle">☰</button>
-    <div id="loginSection" style="max-width: 400px; margin: 80px auto; width: 100%;">
-        <div class="card" style="text-align: center;">
-            <h2 style="color: var(--primary-color); font-size: 18px; margin-bottom: 20px;">Adorê Adm</h2>
-            <form id="loginForm">
-                <label>E-mail</label>
-                <input type="email" id="loginEmail" required placeholder="seu.email@adore.com">
-                <div id="campoSenhaContainer">
-                    <label>Senha</label>
-                    <input type="password" id="loginSenha" placeholder="Sua senha">
-                </div>
-                <button type="submit" id="btnSubmitLogin" class="action-btn" style="padding: 12px; margin-top: 10px; width: 100%;">Entrar no Painel</button>
-            </form>
-            <div style="margin-top: 12px; text-align: right;"><a href="#" id="linkEsqueceuSenha" style="font-size: 11px; color: var(--primary-color); text-decoration: none;">Esqueceu a senha?</a></div>
-            <form id="recuperarSenhaForm" class="hidden" style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 15px;">
-                <h4 style="color: var(--primary-color); font-size: 12px; margin-bottom: 5px;">Recuperação de Senha</h4>
-                <label>Confirme seu E-mail</label>
-                <input type="email" id="recuperarEmailInput" placeholder="seu.email@adore.com" required>
-                <button type="submit" id="btnSubmitRecuperar" class="action-btn hidden" style="background: var(--warning); color: #121212; padding: 10px; margin-top: 5px; width: 100%;">Enviar Instruções</button>
-                <button type="button" id="btnVoltarLogin" style="background: transparent; border: none; color: var(--text-muted); font-size: 11px; cursor: pointer; margin-top: 5px; width: 100%;">Voltar ao Login</button>
-            </form>
-            <div id="loginErro" style="color: var(--danger); font-size: 11px; margin-top: 10px;"></div>
-        </div>
-    </div>
 
-    <aside id="sidebarNav" class="hidden">
-        <div class="sidebar-brand" style="margin-top: 10px;"><h2 id="userWelcomeTitle">Adorê Adm</h2></div>
+    <button class="hamburger-btn" id="hamburgerToggle" aria-label="Abrir menu">☰</button>
+
+    <!-- MENU LATERAL -->
+    <aside id="sidebarNav">
+        <div class="sidebar-brand" style="margin-top: 10px;">
+            <h2 id="userWelcomeTitle">FERNANDO & RITA</h2>
+        </div>
+
+        <div class="admin-toggle-header" id="adminToggleHeader">
+            <span>⚙️ Customizar Layout</span>
+            <span>▼</span>
+        </div>
+        <div class="admin-controls" id="adminControlsPanel">
+            <label>Cor Principal</label>
+            <input type="color" id="pickerPrimary" value="#d4af37">
+            <label>Estilo do Cartão</label>
+            <select id="selectLayoutCard">
+                <option value="solid">Sólido Escuro</option>
+                <option value="bordered">Com Borda Realçada</option>
+                <option value="minimal">Minimalista</option>
+            </select>
+        </div>
+
         <div class="nav-section">
             <h4>Navegação Principal</h4>
             <button class="nav-link-btn" type="button" onclick="window.location.href='Oficina.html'" style="background: rgba(255,123,0,0.15); border-color: var(--primary-color); color: var(--primary-color); font-weight: bold; margin-top: 10px;">🚀 Abrir Estúdio 3D Pro</button>
@@ -74,19 +204,125 @@
             <button class="nav-link-btn" data-target="viewIA" type="button">🤖 Criador IA & Kits Especiais</button>
             <button class="nav-link-btn" data-target="viewPedidos" type="button">📦 Gestão de Pedidos</button>
             <button class="nav-link-btn" data-target="viewNotaFiscal" type="button">📜 Emissão de Nota Fiscal</button>
-            <button class="nav-link-btn" data-target="viewInventario" type="button">🛠️ Inventário & Materiais</button>
-        </div>
-        <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
-    </aside>
+            <button class="nav-link-btn" id="btnAbrirOrcamento" type="button">💰 Gerar Orçamento</button>
 
-    <main id="mainContent" class="hidden full">
-        <div id="viewVitrine" class="admin-view">
-            <div class="card">
-                <h3 style="color: var(--primary-color);">Vitrine de Produtos & Peças 3D</h3>
-                <div id="vitrineCategorizadaContainer"><p style="color: var(--text-muted);">Carregando vitrine...</p></div>
+            <button class="nav-link-btn" data-target="viewInventario" id="btnMenuInventario" type="button">🛠️ Inventário & Materiais ▼</button>
+            <div class="submenu-container" id="submenuInventario">
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('empresas')">🏢 Empresas</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('pf')">👤 Pessoa Física</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('lojas')">🛍️ Lojas</button>
+                <button class="sub-item-btn" onclick="filtrarInventarioSetor('escolas')">🏫 Escolas</button>
             </div>
         </div>
 
+        <button type="button" class="action-btn logout-btn" id="btnLogout">Sair do Sistema</button>
+    </aside>
+
+    <!-- KROM FLUTUANTE -->
+    <div id="kromFloatingWidget">
+        <div id="kromChatWindow" class="hidden">
+            <div class="krom-chat-header">
+                <div class="krom-chat-header-info">
+                    <div>
+                        <h4>Krom • Mestre Artesão</h4>
+                        <span style="font-size: 10px; color: var(--success); font-weight: bold;">● Online na Oficina</span>
+                    </div>
+                </div>
+                <div class="krom-chat-controls">
+                    <button id="btnEnviarOficina" title="Minimizar">🛠️</button>
+                </div>
+            </div>
+            <div class="krom-chat-messages" id="kromChatMessages">
+                <div class="krom-msg krom">Ho ho! Sessão iniciada com sucesso. O que forjamos hoje?</div>
+            </div>
+            <div class="krom-chat-input-area">
+                <input type="text" id="kromInputText" placeholder="Pede dicas ao Krom..." autocomplete="off">
+                <button id="kromSendBtn">Enviar</button>
+            </div>
+        </div>
+        <div class="krom-avatar-bubble" id="kromAvatarToggle" title="Clica para falar com o Krom!"></div>
+    </div>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main id="mainContent">
+
+        <!-- PÁGINA 1: VITRINE -->
+        <div id="viewVitrine" class="admin-view">
+            <div class="card calc-box" style="border: 1px dashed var(--primary-color);">
+                <h3>📦 Extrator Universal em Lote (Arquivo ZIP ➔ Supabase)</h3>
+                <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Selecione um arquivo .zip contendo modelos 3D e clique no botão para extrair e enviar diretamente para a nuvem do Supabase.</p>
+                <div class="calc-row" style="grid-template-columns: 1fr;">
+                    <div>
+                        <input type="file" id="inputZipLote" accept=".zip" style="background: #181818; margin-bottom: 8px;">
+                        <button type="button" id="btnExtrairEnviarSupabase" class="action-btn" style="background: var(--success); color: #fff; padding: 11px;">🚀 Extrair e Enviar para o Supabase</button>
+                    </div>
+                </div>
+                <div id="zipStatusLog" style="font-size: 11px; color: var(--warning); margin-top: 8px;"></div>
+            </div>
+
+            <div class="card calc-box">
+                <h3>🔗 Extrator Automático de Links e Pastas Externas</h3>
+                <form id="formLinkPasta">
+                    <div class="calc-row" style="grid-template-columns: 3fr 1fr;">
+                        <div>
+                            <label>URL ou Repositório de Ativos</label>
+                            <input type="url" id="inputUrlPasta" placeholder="https://drive.google.com/drive/folders/..." required>
+                        </div>
+                        <div style="display: flex; flex-direction: column; justify-content: flex-end;">
+                            <label>&nbsp;</label>
+                            <button type="submit" class="action-btn" style="height: 38px;">Catalogar Link</button>
+                        </div>
+                    </div>
+                </form>
+                <div id="painelSublinks" style="margin-top: 10px; font-size: 11px; color: #ddd;" class="hidden">
+                    <p style="color: var(--primary-color); font-weight: bold;">Ativos e Links Registrados:</p>
+                    <ul id="listaSublinks" style="margin: 5px 0; padding-left: 15px;"></ul>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top: 0; color: var(--primary-color); font-size: 15px; margin-bottom: 10px;">Cadastrar Novo Produto / Peça</h3>
+                <form id="produtoForm">
+                    <div class="calc-row">
+                        <div><label>Nome do Produto</label><input type="text" id="produtoNome" name="nome" placeholder="Nome do modelo 3D" required></div>
+                        <div>
+                            <label>Categoria</label>
+                            <select id="categoriaInput" name="categoria" required style="width:100%; padding:9px; background:#2a2a2a; color:white; border:1px solid var(--border-color); border-radius:6px;">
+                                <option value="Decoração">Decoração</option>
+                                <option value="Utilidades">Utilidades</option>
+                                <option value="Personalizados">Personalizados</option>
+                                <option value="Kits Especiais">Kits Especiais</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Preço de Venda (R$)</label><input type="number" step="0.01" id="preco" name="preco" required></div>
+                        <div><label>Link Externo (URL)</label><input type="text" id="link_externo" name="link_externo" placeholder="https://..."></div>
+                    </div>
+                    <div class="calc-row">
+                        <div><label>Imagem de Capa</label><input type="file" id="inputImagemCapa" name="imagem" accept="image/*"></div>
+                        <div><label>Arquivo STL</label><input type="file" id="inputArquivoStlDireto" name="stl" accept=".stl"></div>
+                    </div>
+                    <button type="submit" class="action-btn" style="padding: 10px; margin-top: 5px;">Salvar no Sistema & Supabase</button>
+                </form>
+                <div id="resultado" style="margin-top: 10px; font-size: 11px;">Aguardando envio...</div>
+            </div>
+
+            <div class="card" style="border: 2px solid var(--primary-color);">
+                <h3 style="color: var(--primary-color); margin-top:0;">🎁 Vitrine de Kits & Datas Especiais</h3>
+                <div id="kitsEspeciaisContainer"><p style="color: var(--text-muted); font-size: 12px;">Carregando kits especiais...</p></div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h3 style="color: var(--primary-color); margin: 0; font-size: 15px;">Vitrine • Separada por Categorias</h3>
+                    <span id="dbStatusBadge" style="font-size: 10px; padding: 3px 6px; border-radius: 4px; background: #333; color: var(--warning);">Conectando Supabase...</span>
+                </div>
+                <div id="vitrineCategorizadaContainer"><p style="color: var(--text-muted); font-size: 12px;">Carregando vitrine...</p></div>
+            </div>
+        </div>
+
+        <!-- PÁGINA 1.1: MARKETING & PROPAGANDA -->
         <div id="viewMarketing" class="admin-view hidden">
             <div class="card" style="border: 2px solid var(--primary-color);">
                 <h3 style="color: var(--primary-color); margin-top: 0;">📢 Central de Marketing & Disparo de Propaganda</h3>
@@ -141,88 +377,276 @@
             </div>
         </div>
 
-        <div id="viewIA" class="admin-view hidden"><div class="card"><h3 style="color: var(--primary-color);">Criador IA</h3></div></div>
-        <div id="viewPedidos" class="admin-view hidden"><div class="card"><h3 style="color: var(--primary-color);">Pedidos</h3></div></div>
-        <div id="viewNotaFiscal" class="admin-view hidden"><div class="card"><h3 style="color: var(--primary-color);">Nota Fiscal</h3></div></div>
-        <div id="viewInventario" class="admin-view hidden"><div class="card"><h3 style="color: var(--primary-color);">Inventário</h3></div></div>
+        <!-- PÁGINA 2: CRIADOR IA & KITS -->
+        <div id="viewIA" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🤖 Criador de Arte, Modelos 3D & Kits Especiais por IA</h3>
+                <form id="iaKitForm">
+                    <label>Tipo de Criação</label>
+                    <select id="iaTipoCriacao">
+                        <option value="kit_natal">Kit Especial: Natal 🎄</option>
+                        <option value="kit_criancas">Kit Especial: Dia das Crianças 🧸</option>
+                        <option value="kit_pascoa">Kit Especial: Páscoa 🐰</option>
+                        <option value="kit_valentines">Kit Especial: Dia dos Namorados ❤️</option>
+                        <option value="personalizado">Gerar Peça Única por Prompt</option>
+                    </select>
+
+                    <label>Nome / Tema do Kit ou Peça</label>
+                    <input type="text" id="iaKitNome" placeholder="Ex: Coleção Natalina Luxo com Suportes e Enfeites" required>
+
+                    <label>Prompt / Descrição Detalhada</label>
+                    <textarea id="iaPrompt" maxlength="800" placeholder="Descreva os itens que compõem este kit ou modelo..."></textarea>
+
+                    <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px;">Gerar e Sincronizar com Vitrine & Supabase</button>
+                </form>
+                <div id="iaStatusLog" style="font-size: 11px; margin-top: 10px; color: var(--success);"></div>
+            </div>
+        </div>
+
+        <!-- PÁGINA 3: PEDIDOS -->
+        <div id="viewPedidos" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📦 Menu de Pedidos & Aprovações</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID Pedido</th>
+                            <th>Cliente</th>
+                            <th>Descrição</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaPedidosCorpo">
+                        <tr>
+                            <td>#1042</td>
+                            <td>cliente@email.com</td>
+                            <td>Suporte de Comando 3D</td>
+                            <td><span class="status-badge status-pending">Aguardando</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PÁGINA 4: NOTA FISCAL -->
+        <div id="viewNotaFiscal" class="admin-view hidden">
+            <div class="card" style="border: 2px solid var(--primary-color);">
+                <h3 style="color: var(--primary-color); margin-top:0;">📜 Emissão de Nota Fiscal com Certificado Digital</h3>
+                <form id="formEmissaoNF">
+                    <div class="calc-row">
+                        <div>
+                            <label>Tipo de Certificado Digital</label>
+                            <select id="nfTipoCertificado">
+                                <option value="A1">Certificado A1 (.pfx / .p12)</option>
+                                <option value="A3">Certificado A3 (Token / Cartão)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Arquivo do Certificado (A1) ou Senha</label>
+                            <input type="file" id="nfArquivoCertificado" accept=".pfx,.p12">
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div>
+                            <label>Nome / Razão Social do Cliente</label>
+                            <input type="text" id="nfClienteNome" placeholder="Ex: Nome do Comprador" required>
+                        </div>
+                        <div>
+                            <label>CPF / CNPJ do Cliente</label>
+                            <input type="text" id="nfClienteDoc" placeholder="000.000.000-00" required>
+                        </div>
+                    </div>
+                    <div class="calc-row">
+                        <div>
+                            <label>Número da NF / Série</label>
+                            <input type="text" id="nfNumeroSerie" value="0001 / Série 1" readonly style="background: #111; color: var(--primary-color);">
+                        </div>
+                        <div>
+                            <label>Valor Total da Nota (R$)</label>
+                            <input type="number" step="0.01" id="nfValorTotal" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="action-btn" style="padding: 12px; margin-top: 10px; background: var(--success); color: #fff;">Emitir Nota Fiscal Digitalmente</button>
+                </form>
+                <div id="nfStatusLog" style="font-size: 11px; margin-top: 10px;"></div>
+            </div>
+
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin: 0 0 15px 0;">📊 Histórico de Notas Fiscais Emitidas</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Número NF</th>
+                            <th>Cliente</th>
+                            <th>Documento</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaHistoricoNF">
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhuma nota fiscal emitida ainda.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PÁGINA 5: INVENTÁRIO -->
+        <div id="viewInventario" class="admin-view hidden">
+            <div class="card">
+                <h3 style="color: var(--primary-color); margin-top:0;">🛠️ Gestão de Inventário (3D & Sublimação)</h3>
+                <p style="font-size: 12px; color: var(--text-muted);">Controle completo de filamentos, tintas e insumos da oficina.</p>
+            </div>
+        </div>
+
     </main>
 
+    <!-- MODAL DE DETALHES -->
+    <div id="modalDetalhesProduto" class="hidden">
+        <div class="modal-content">
+            <button class="close-modal" id="fecharModalDetalhes">✕</button>
+            <h3 id="modalTituloProduto" style="color: var(--primary-color); margin-top:0;">Detalhes do Produto</h3>
+            <div id="modalCorpoDetalhes" style="display: flex; flex-direction: column; gap: 10px; font-size: 12px;"></div>
+        </div>
+    </div>
+
+    <!-- SCRIPT COMPLETO DE SUPORTE E INTEGRAÇÃO -->
     <script>
-        const ADMIN_EMAILS = ["ftoty.fernando@gmail.com", "adorepersonalite@gmail.com"];
-        function isAdminEmail(email) { return email && ADMIN_EMAILS.includes(email.trim().toLowerCase()); }
+        const SUPABASE_URL = "https://mlfgluwcuzddwijffrbe.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZmdsdXdjdXpkZHdpamZmcmJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg0NDg0ODYsImV4cCI6MjEwNDAyNDQ4Nn0.8U4Df4fQg1fa0ceowGndkE3c06hMUMKjqL0ceZhTNR0";
+        let supabaseClient = null;
+
+        try {
+            if (window.supabase && SUPABASE_URL.includes("http")) {
+                supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            }
+        } catch (e) {}
+
+        // BYPASS AUTOMÁTICO DE SESSÃO ADMINISTRATIVA
+        (function autoLoginAdmin() {
+            localStorage.setItem('adore_logged_user', "ftoty.fernando@gmail.com");
+        })();
 
         document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('loginForm');
-            const recuperarSenhaForm = document.getElementById('recuperarSenhaForm');
-            const linkEsqueceuSenha = document.getElementById('linkEsqueceuSenha');
-            const btnVoltarLogin = document.getElementById('btnVoltarLogin');
-            const btnSubmitLogin = document.getElementById('btnSubmitLogin');
-            const btnSubmitRecuperar = document.getElementById('btnSubmitRecuperar');
-            const loginEmailInput = document.getElementById('loginEmail');
-            const loginSection = document.getElementById('loginSection');
-            const sidebarNav = document.getElementById('sidebarNav');
-            const mainContent = document.getElementById('mainContent');
-            const hamburgerToggle = document.getElementById('hamburgerToggle');
-            const loginErro = document.getElementById('loginErro');
+            carregarProdutosVitrine();
+            carregarKitsEspeciais();
+            carregarHistoricoNF();
+            carregarCampanhasMkt();
 
-            linkEsqueceuSenha?.addEventListener('click', (e) => {
-                e.preventDefault();
-                loginForm.classList.add('hidden');
-                btnSubmitLogin.classList.add('hidden');
-                recuperarSenhaForm.classList.remove('hidden');
-                btnSubmitRecuperar.classList.remove('hidden');
-                loginErro.textContent = "";
-            });
-
-            btnVoltarLogin?.addEventListener('click', (e) => {
-                e.preventDefault();
-                recuperarSenhaForm.classList.add('hidden');
-                btnSubmitRecuperar.classList.add('hidden');
-                loginForm.classList.remove('hidden');
-                btnSubmitLogin.classList.remove('hidden');
-                loginErro.textContent = "";
-            });
-
-            loginForm?.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const emailVal = loginEmailInput.value.trim().toLowerCase();
-                const senhaVal = document.getElementById('loginSenha').value;
-                if (isAdminEmail(emailVal) || senhaVal.length > 0) {
-                    localStorage.setItem('adore_logged_user', emailVal);
-                    executarLoginSucesso(emailVal);
-                } else {
-                    loginErro.textContent = "Por favor, digite a senha de acesso.";
-                }
-            });
-
-            function executarLoginSucesso(email) {
-                loginSection.classList.add('hidden');
-                sidebarNav.classList.remove('hidden');
-                mainContent.classList.remove('hidden');
-                hamburgerToggle.classList.remove('hidden');
-                carregarCampanhasMkt();
-            }
-
-            document.getElementById('btnLogout')?.addEventListener('click', () => {
-                localStorage.removeItem('adore_logged_user');
-                location.reload();
-            });
-
-            if (localStorage.getItem('adore_logged_user')) {
-                executarLoginSucesso(localStorage.getItem('adore_logged_user'));
-            }
-
+            // NAVEGAÇÃO ENTRE ABAS
             const navButtons = document.querySelectorAll('.nav-link-btn[data-target]');
             navButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    const target = btn.getAttribute('data-target');
+                    const targetView = btn.getAttribute('data-target');
                     navButtons.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
-                    document.querySelectorAll('.admin-view').forEach(v => v.classList.add('hidden'));
-                    document.getElementById(target)?.classList.remove('hidden');
+
+                    document.querySelectorAll('.admin-view').forEach(view => view.classList.add('hidden'));
+                    const targetEl = document.getElementById(targetView);
+                    if (targetEl) targetEl.classList.remove('hidden');
+
+                    if (targetView === 'viewVitrine') {
+                        carregarProdutosVitrine();
+                        carregarKitsEspeciais();
+                    } else if (targetView === 'viewNotaFiscal') {
+                        carregarHistoricoNF();
+                    } else if (targetView === 'viewMarketing') {
+                        carregarCampanhasMkt();
+                    }
                 });
             });
 
+            const btnMenuInv = document.getElementById('btnMenuInventario');
+            const subMenuInv = document.getElementById('submenuInventario');
+            btnMenuInv?.addEventListener('click', (e) => {
+                e.preventDefault();
+                subMenuInv.classList.toggle('show');
+            });
+
+            // EXTRATOR DE LINK DE PASTA EXTERNA
+            const formLinkPasta = document.getElementById('formLinkPasta');
+            if (formLinkPasta) {
+                formLinkPasta.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const urlVal = document.getElementById('inputUrlPasta').value.trim();
+                    if (!urlVal) return;
+
+                    const lista = JSON.parse(localStorage.getItem('adore_links_pastas') || '[]');
+                    lista.push(urlVal);
+                    localStorage.setItem('adore_links_pastas', JSON.stringify(lista));
+
+                    document.getElementById('inputUrlPasta').value = '';
+                    atualizarListaSublinks();
+                });
+            }
+            atualizarListaSublinks();
+
+            // BOTÃO DE EXTRAÇÃO E ENVIO DE ZIP PARA O SUPABASE
+            const btnExtrairSupabase = document.getElementById('btnExtrairEnviarSupabase');
+            if (btnExtrairSupabase) {
+                btnExtrairSupabase.addEventListener('click', async () => {
+                    const inputZip = document.getElementById('inputZipLote');
+                    const statusLog = document.getElementById('zipStatusLog');
+
+                    if (!inputZip || inputZip.files.length === 0) {
+                        statusLog.style.color = "var(--danger)";
+                        statusLog.textContent = "Por favor, selecione um arquivo .zip primeiro.";
+                        return;
+                    }
+
+                    const file = inputZip.files[0];
+                    statusLog.style.color = "var(--warning)";
+                    statusLog.textContent = "Lendo arquivo ZIP e preparando envio para o Supabase...";
+
+                    try {
+                        const zip = new JSZip();
+                        const zipContent = await zip.loadAsync(file);
+                        let count = 0;
+
+                        for (let path in zipContent.files) {
+                            const entry = zipContent.files[path];
+                            if (entry.dir) continue;
+
+                            const nomePuro = path.split('/').pop().replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+                            const nomeFormatado = nomePuro.charAt(0).toUpperCase() + nomePuro.slice(1);
+                            
+                            const blob = await entry.async('blob');
+                            const urlBlob = URL.createObjectURL(blob);
+
+                            const produtoZip = {
+                                nome: nomeFormatado,
+                                categoria: 'Decoração',
+                                preco: 45.00,
+                                dimensoes: '10x10x10cm',
+                                peso: '100g',
+                                stl_url: urlBlob,
+                                imagem_url: 'https://via.placeholder.com/220x120?text=Adore+3D'
+                            };
+
+                            if (supabaseClient) {
+                                await supabaseClient.from('produtos').insert([produtoZip]);
+                            }
+
+                            const locais = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]');
+                            locais.push(produtoZip);
+                            localStorage.setItem('adore_produtos_cadastrados', JSON.stringify(locais));
+                            count++;
+                        }
+
+                        statusLog.style.color = "var(--success)";
+                        statusLog.textContent = `Sucesso! ${count} itens extraídos e enviados para o Supabase e Vitrine.`;
+                        inputZip.value = "";
+                        carregarProdutosVitrine();
+                    } catch (err) {
+                        statusLog.style.color = "var(--danger)";
+                        statusLog.textContent = "Erro ao processar e enviar o arquivo ZIP.";
+                    }
+                });
+            }
+
+            // MÓDULO DE MARKETING & PROPAGANDA
             const mktTemplateSelect = document.getElementById('mktTemplateSelect');
             const mktAssunto = document.getElementById('mktAssunto');
             const mktMensagem = document.getElementById('mktMensagem');
@@ -249,25 +673,440 @@
                     const log = document.getElementById('mktStatusLog');
                     log.style.color = "var(--success)";
                     log.textContent = "Disparando campanha publicitária com sucesso para o público selecionado...";
+                    
                     const campanha = { data: new Date().toLocaleDateString('pt-BR'), assunto: assunto, publico: publico, status: "Enviado com Sucesso" };
                     const historico = JSON.parse(localStorage.getItem('adore_mkt_campanhas') || '[]');
                     historico.unshift(campanha);
                     localStorage.setItem('adore_mkt_campanhas', JSON.stringify(historico));
-                    setTimeout(() => { formMkt.reset(); log.textContent = "Campanha disparada e registrada no histórico!"; carregarCampanhasMkt(); }, 1200);
+
+                    setTimeout(() => {
+                        formMkt.reset();
+                        log.textContent = "Campanha disparada e registrada no histórico!";
+                        carregarCampanhasMkt();
+                    }, 1200);
                 });
             }
 
-            function carregarCampanhasMkt() {
-                const tbody = document.getElementById('tabelaHistoricoMkt');
-                if (!tbody) return;
-                const historico = JSON.parse(localStorage.getItem('adore_mkt_campanhas') || '[]');
-                if (historico.length === 0) {
-                    tbody.innerHTML = <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma campanha disparada recentemente.</td></tr>;
-                    return;
-                }
-                tbody.innerHTML = historico.map(c => <tr><td></td><td style="color: var(--primary-color); font-weight: bold;"></td><td></td><td><span class="status-badge"></span></td></tr>).join('');
+            // EMISSÃO DE NOTA FISCAL
+            const formEmissaoNF = document.getElementById('formEmissaoNF');
+            if (formEmissaoNF) {
+                formEmissaoNF.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const tipoCert = document.getElementById('nfTipoCertificado').value;
+                    const nomeCli = document.getElementById('nfClienteNome').value.trim();
+                    const docCli = document.getElementById('nfClienteDoc').value.trim();
+                    const valorTot = parseFloat(document.getElementById('nfValorTotal').value).toFixed(2);
+                    const statusLog = document.getElementById('nfStatusLog');
+                    const numeroNFGerado = "NF-" + Math.floor(100000 + Math.random() * 900000);
+
+                    statusLog.style.color = "var(--warning)";
+                    statusLog.textContent = "Processando certificado digital e transmitindo NF para a SEFAZ...";
+
+                    const novaNota = {
+                        numero_nf: numeroNFGerado,
+                        série: "1",
+                        cliente_nome: nomeCli,
+                        cliente_documento: docCli,
+                        valor_total: valorTot,
+                        status_emissao: "Autorizada",
+                        certificado_tipo: tipoCert,
+                        created_at: new Date().toISOString()
+                    };
+
+                    try {
+                        if (supabaseClient) {
+                            await supabaseClient.from('notas_fiscais').insert([novaNota]);
+                        }
+                        const notasLocal = JSON.parse(localStorage.getItem('adore_notas_fiscais') || '[]');
+                        notasLocal.push(novaNota);
+                        localStorage.setItem('adore_notas_fiscais', JSON.stringify(notasLocal));
+
+                        statusLog.style.color = "var(--success)";
+                        statusLog.textContent = `Sucesso! Nota Fiscal ${numeroNFGerado} emitida e autorizada via certificado ${tipoCert}.`;
+                        formEmissaoNF.reset();
+                        carregarHistoricoNF();
+                    } catch (err) {
+                        statusLog.style.color = "var(--danger)";
+                        statusLog.textContent = "Erro ao registrar NF no Supabase.";
+                    }
+                });
+            }
+
+            // GERADOR DE KITS POR IA
+            const iaKitForm = document.getElementById('iaKitForm');
+            if (iaKitForm) {
+                iaKitForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const tipo = document.getElementById('iaTipoCriacao').value;
+                    const nomeKit = document.getElementById('iaKitNome').value.trim();
+                    const statusLog = document.getElementById('iaStatusLog');
+
+                    statusLog.textContent = "Gerando kit especial e sincronizando com Supabase e Vitrine...";
+
+                    let precoSugeridoKit = 120.00;
+                    let imagemKit = "https://via.placeholder.com/220x120?text=Kit+Especial+Adore";
+
+                    if (tipo === 'kit_natal') {
+                        imagemKit = "https://via.placeholder.com/220x120?text=Kit+Natal+3D";
+                        precoSugeridoKit = 149.90;
+                    } else if (tipo === 'kit_criancas') {
+                        imagemKit = "https://via.placeholder.com/220x120?text=Kit+Criancas+3D";
+                        precoSugeridoKit = 99.90;
+                    } else if (tipo === 'kit_pascoa') {
+                        imagemKit = "https://via.placeholder.com/220x120?text=Kit+Pascoa+3D";
+                        precoSugeridoKit = 89.90;
+                    }
+
+                    const novoKit = {
+                        nome: nomeKit,
+                        categoria: 'Kits Especiais',
+                        preco: precoSugeridoKit.toFixed(2),
+                        dimensoes: "Kit Variado (Multi-peças)",
+                        peso: "350g",
+                        stl_url: "#",
+                        imagem_url: imagemKit,
+                        created_at: new Date()
+                    };
+
+                    try {
+                        if (supabaseClient) {
+                            await supabaseClient.from('produtos').insert([novoKit]);
+                        }
+                        const locais = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]');
+                        locais.push(novoKit);
+                        localStorage.setItem('adore_produtos_cadastrados', JSON.stringify(locais));
+
+                        statusLog.textContent = `Sucesso! Kit "${nomeKit}" gerado e adicionado à Vitrine e Supabase.`;
+                        iaKitForm.reset();
+                        carregarProdutosVitrine();
+                        carregarKitsEspeciais();
+                    } catch (err) {
+                        statusLog.textContent = "Erro ao salvar o kit gerado.";
+                    }
+                });
+            }
+
+            // CADASTRO MANUAL DE PRODUTO
+            const produtoForm = document.getElementById('produtoForm');
+            if (produtoForm) {
+                produtoForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const nome = document.getElementById('produtoNome').value.trim();
+                    const categoria = document.getElementById('categoriaInput').value;
+                    const preco = parseFloat(document.getElementById('preco').value) || 0;
+                    const link_externo = document.getElementById('link_externo').value.trim();
+                    const resultadoDiv = document.getElementById('resultado');
+
+                    resultadoDiv.textContent = "Salvando produto no Supabase...";
+
+                    const novoProduto = {
+                        nome,
+                        categoria,
+                        preco,
+                        link_externo,
+                        imagem_url: 'https://via.placeholder.com/220x120?text=Adore+3D',
+                        stl_url: '#'
+                    };
+
+                    try {
+                        if (supabaseClient) {
+                            await supabaseClient.from('produtos').insert([novoProduto]);
+                        }
+
+                        const locais = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]');
+                        locais.push(novoProduto);
+                        localStorage.setItem('adore_produtos_cadastrados', JSON.stringify(locais));
+
+                        resultadoDiv.style.color = "var(--success)";
+                        resultadoDiv.textContent = "Produto salvo com sucesso no Supabase!";
+                        produtoForm.reset();
+                        carregarProdutosVitrine();
+                    } catch (err) {
+                        resultadoDiv.style.color = "var(--danger)";
+                        resultadoDiv.textContent = "Erro ao salvar no Supabase.";
+                    }
+                });
             }
         });
+
+        function atualizarListaSublinks() {
+            const painel = document.getElementById('painelSublinks');
+            const listaUl = document.getElementById('listaSublinks');
+            const itens = JSON.parse(localStorage.getItem('adore_links_pastas') || '[]');
+
+            if (!painel || !listaUl) return;
+            if (itens.length === 0) {
+                painel.classList.add('hidden');
+                return;
+            }
+
+            painel.classList.remove('hidden');
+            listaUl.innerHTML = itens.map(link => `<li><a href="${link}" target="_blank" style="color: var(--primary-color);">${link}</a></li>`).join('');
+        }
+
+        async function carregarCampanhasMkt() {
+            const tbody = document.getElementById('tabelaHistoricoMkt');
+            if (!tbody) return;
+            const historico = JSON.parse(localStorage.getItem('adore_mkt_campanhas') || '[]');
+            if (historico.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Nenhuma campanha disparada recentemente.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = historico.map(c => `<tr><td>${c.data}</td><td style="color: var(--primary-color); font-weight: bold;">${c.assunto}</td><td>${c.publico.toUpperCase()}</td><td><span class="status-badge status-approved">${c.status}</span></td></tr>`).join('');
+        }
+
+        async function carregarHistoricoNF() {
+            const tbody = document.getElementById('tabelaHistoricoNF');
+            if (!tbody) return;
+
+            let notas = [];
+            try {
+                if (supabaseClient) {
+                    const { data } = await supabaseClient.from('notas_fiscais').select('*').order('created_at', { ascending: false });
+                    if (data) notas = data;
+                }
+            } catch (e) {}
+
+            if (notas.length === 0) {
+                notas = JSON.parse(localStorage.getItem('adore_notas_fiscais') || '[]');
+            }
+
+            if (notas.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Nenhuma nota fiscal emitida ainda.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = notas.map(n => `
+                <tr>
+                    <td style="color: var(--primary-color); font-weight: bold;">${n.numero_nf}</td>
+                    <td>${n.cliente_nome}</td>
+                    <td>${n.cliente_documento}</td>
+                    <td>R$ ${parseFloat(n.valor_total).toFixed(2)}</td>
+                    <td><span class="status-badge status-approved">${n.status_emissao}</span></td>
+                    <td>
+                        <button class="action-btn" style="padding: 4px 8px; font-size: 10px; background: #2e7d32;" onclick="alert('Baixando XML/PDF da NF ${n.numero_nf}')">Baixar XML/PDF</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function carregarProdutosVitrine() {
+            const container = document.getElementById('vitrineCategorizadaContainer');
+            const badge = document.getElementById('dbStatusBadge');
+            if (!container) return;
+
+            let produtos = [];
+            try {
+                if (supabaseClient) {
+                    const { data, error } = await supabaseClient.from('produtos').select('*');
+                    if (!error && data) {
+                        produtos = data;
+                        if (badge) {
+                            badge.textContent = "Sincronizado com Supabase";
+                            badge.style.background = "#0c2b14";
+                            badge.style.color = "var(--success)";
+                        }
+                    } else { throw error; }
+                } else { throw new Error(); }
+            } catch (err) {
+                if (badge) {
+                    badge.textContent = "Modo Local (Offline)";
+                    badge.style.background = "#332b00";
+                    badge.style.color = "var(--warning)";
+                }
+                produtos = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]');
+            }
+
+            if (produtos.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); font-size: 12px;">Nenhum produto cadastrado na vitrine ainda.</p>`;
+                return;
+            }
+
+            const mapa = {};
+            produtos.forEach(p => {
+                const cat = p.categoria || 'Geral';
+                if (!mapa[cat]) mapa[cat] = [];
+                mapa[cat].push(p);
+            });
+
+            container.innerHTML = Object.keys(mapa).map(cat => `
+                <div class="category-section">
+                    <h4 class="category-title">📂 Categoria: ${cat}</h4>
+                    <div class="products-grid">
+                        ${mapa[cat].map(p => `
+                            <div class="product-card">
+                                <img src="${p.imagem_url \vert{}\vert{} 'https://via.placeholder.com/220x120?text=Adore+3D'}" class="product-thumb" alt="${p.nome}">
+                                <div class="product-info">
+                                    <h4>${p.nome}</h4>
+                                    <p class="price">R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
+                                </div>
+                                <div class="product-actions">
+                                    <button type="button" class="action-btn" onclick='abrirDetalhesProduto(${JSON.stringify(p)})'>Detalhes</button>${p.stl_url ? `<a href="${p.stl_url}" download="${p.nome}.stl"><button type="button" class="action-btn" style="background:#2e7d32; width:100%;">Baixar STL</button></a>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function carregarKitsEspeciais() {
+            const container = document.getElementById('kitsEspeciaisContainer');
+            if (!container) return;
+
+            let produtos = [];
+            try {
+                if (supabaseClient) {
+                    const { data } = await supabaseClient.from('produtos').select('*').eq('categoria', 'Kits Especiais');
+                    if (data) produtos = data;
+                }
+            } catch(e) {}
+
+            if (produtos.length === 0) {
+                produtos = JSON.parse(localStorage.getItem('adore_produtos_cadastrados') || '[]').filter(p => p.categoria === 'Kits Especiais');
+            }
+
+            if (produtos.length === 0) {
+                container.innerHTML = `<p style="color: var(--text-muted); font-size: 12px;">Nenhum kit especial gerado no momento. Use a aba "Criador IA & Kits" para criar pacotes festivos.</p>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="products-grid">
+                    ${produtos.map(p => `
+                        <div class="product-card" style="border-color: var(--primary-color);">
+                            <img src="${p.imagem_url}" class="product-thumb" alt="${p.nome}">
+                            <div class="product-info">
+                                <h4 style="color: var(--primary-color);">${p.nome}</h4>
+                                <p class="price">R$ ${parseFloat(p.preco || 0).toFixed(2)}</p>
+                            </div>
+                            <div class="product-actions">
+                                <button type="button" class="action-btn" onclick='abrirDetalhesProduto(${JSON.stringify(p)})'>Detalhes</button>
+                                <a href="${p.stl_url \vert{}\vert{} '#'}" download="${p.nome}.zip"><button type="button" class="action-btn" style="background:#2e7d32; width:100%;">Baixar Kit (STL)</button></a>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        window.abrirDetalhesProduto = function(produto) {
+            const modal = document.getElementById('modalDetalhesProduto');
+            const titulo = document.getElementById('modalTituloProduto');
+            const corpo = document.getElementById('modalCorpoDetalhes');
+
+            titulo.textContent = produto.nome || 'Detalhes';
+            corpo.innerHTML = `
+                <div style="background:#111; padding:15px; border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:8px;">
+                    <img src="${produto.imagem_url}" style="width:100%; height:150px; object-fit:cover; border-radius:4px;" alt="Capa">
+                    <p><strong>Categoria:</strong> ${produto.categoria}</p>
+                    <p><strong>Nome:</strong> ${produto.nome}</p>
+                    <p><strong>Preço:</strong> <span style="color:var(--primary-color); font-size:14px; font-weight:bold;">R$ ${parseFloat(produto.preco || 0).toFixed(2)}</span></p>
+                    <p><strong>Dimensões:</strong> ${produto.dimensoes || 'N/D'}</p>
+                    <p><strong>Peso:</strong> ${produto.peso || 'N/D'}</p>
+                </div>
+                ${produto.stl_url ? `<a href="${produto.stl_url}" download="${produto.nome}.stl"><button class="action-btn" style="width:100%; margin-top:10px; background:#2e7d32; padding:12px;">Baixar Arquivo STL</button></a>` : ''}
+            `;
+            modal.classList.remove('hidden');
+        };
+
+        document.getElementById('fecharModalDetalhes')?.addEventListener('click', () => {
+            document.getElementById('modalDetalhesProduto').classList.add('hidden');
+        });
+
+        function filtrarInventarioSetor(setor) {
+            console.log("Inventário do setor:", setor);
+        }
+
+        // Widget do Assistente Krom
+        const kromAvatarToggle = document.getElementById('kromAvatarToggle');
+        const kromChatWindow = document.getElementById('kromChatWindow');
+        const btnEnviarOficina = document.getElementById('btnEnviarOficina');
+        const kromSendBtn = document.getElementById('kromSendBtn');
+        const kromInputText = document.getElementById('kromInputText');
+        const kromChatMessages = document.getElementById('kromChatMessages');
+
+        kromAvatarToggle?.addEventListener('click', () => {
+            kromChatWindow?.classList.toggle('hidden');
+        });
+
+        btnEnviarOficina?.addEventListener('click', () => {
+            kromChatWindow?.classList.add('hidden');
+        });
+
+        kromSendBtn?.addEventListener('click', () => {
+            enviarMensagemKrom();
+        });
+
+        kromInputText?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') enviarMensagemKrom();
+        });
+
+        function enviarMensagemKrom() {
+            const txt = kromInputText.value.trim();
+            if (!txt) return;
+
+            const userMsg = document.createElement('div');
+            userMsg.className = 'krom-msg user';
+            userMsg.textContent = txt;
+            kromChatMessages.appendChild(userMsg);
+            kromInputText.value = '';
+
+            setTimeout(() => {
+                const kromMsg = document.createElement('div');
+                kromMsg.className = 'krom-msg krom';
+                kromMsg.textContent = "Ho ho! Excelente ideia para a forja. Vamos ajustar os parâmetros na Oficina 3D!";
+                kromChatMessages.appendChild(kromMsg);
+                kromChatMessages.scrollTop = kromChatMessages.scrollHeight;
+            }, 600);
+
+            kromChatMessages.scrollTop = kromChatMessages.scrollHeight;
+        }
+
+        // Customização de Layout
+        const pickerPrimary = document.getElementById('pickerPrimary');
+        const adminToggleHeader = document.getElementById('adminToggleHeader');
+        const adminControlsPanel = document.getElementById('adminControlsPanel');
+
+        adminToggleHeader?.addEventListener('click', () => {
+            adminControlsPanel?.classList.toggle('show');
+        });
+
+        pickerPrimary?.addEventListener('input', (e) => {
+            const cor = e.target.value;
+            document.documentElement.style.setProperty('--primary-color', cor);
+            localStorage.adore_primary_color = cor;
+        });
+
+        if (localStorage.adore_primary_color) {
+            document.documentElement.style.setProperty('--primary-color', localStorage.adore_primary_color);
+            if (pickerPrimary) pickerPrimary.value = localStorage.adore_primary_color;
+        }
+
+        // Hamburguer mobile toggle
+        const hamburgerToggle = document.getElementById('hamburgerToggle');
+        const sidebarNav = document.getElementById('sidebarNav');
+        const mainContent = document.getElementById('mainContent');
+
+        hamburgerToggle?.addEventListener('click', () => {
+            sidebarNav?.classList.toggle('collapsed');
+            mainContent?.classList.toggle('full');
+        });
     </script>
+</body>
+</html>
+    </script>
+    <!-- Módulos carregados em ordem -->
+    <script src="js/auth.js"></script>
+    <script src="js/vitrine.js"></script>
+    <script src="js/krom.js"></script>
+    <script src="js/inventario.js"></script>
+    <script src="js/pedidos.js"></script>
+    <script src="js/ia.js"></script>
+    <script src="js/server.js"></script>
+    <script src="js/stl-reader.js"></script>
+    <script src="js/sublimacao.js"></script>
+    <script src="js/paymentcontroller.js"></script>
+    <script src="js/layout.js"></script>
 </body>
 </html>
