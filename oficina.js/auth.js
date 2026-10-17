@@ -7,16 +7,52 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
+// Lista de Administradores com Acesso Direto (Sem Senha)
+const ADMIN_EMAILS = ["ftoty.fernando@gmail.com", "adorepersonalite@gmail.com"];
+
+function isAdminEmail(email) {
+    if (!email) return false;
+    return ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     verificarSessaoAtiva();
     tratarRecuperacaoSenhaURL();
 
-    // Eventos estáticos do DOM (caso existam na página principal)
+    // Eventos estáticos do DOM
     const abrirModalBtn = document.getElementById('abrirModalRegistoBtn');
     const fecharModalBtn = document.getElementById('fecharModalBtn');
     const modal = document.getElementById('modalPrimeiroAcesso');
     const formRegisto = document.getElementById('formPrimeiroAcesso');
     const loginForm = document.getElementById('loginForm');
+    
+    // Elementos de Recuperação de Senha
+    const linkEsqueceuSenha = document.getElementById('linkEsqueceuSenha');
+    const recuperarSenhaForm = document.getElementById('recuperarSenhaForm');
+    const btnVoltarLogin = document.getElementById('btnVoltarLogin');
+    const btnSubmitLogin = document.getElementById('btnSubmitLogin');
+    const btnSubmitRecuperar = document.getElementById('btnSubmitRecuperar');
+
+    // Isolamento e alternância correta dos botões de Recuperação
+    linkEsqueceuSenha?.addEventListener('click', (e) => {
+        e.preventDefault();
+        loginForm?.classList.add('hidden');
+        btnSubmitLogin?.classList.add('hidden');
+        recuperarSenhaForm?.classList.remove('hidden');
+        btnSubmitRecuperar?.classList.remove('hidden');
+        const erroDiv = document.getElementById('loginErro');
+        if (erroDiv) erroDiv.innerText = "";
+    });
+
+    btnVoltarLogin?.addEventListener('click', (e) => {
+        e.preventDefault();
+        recuperarSenhaForm?.classList.add('hidden');
+        btnSubmitRecuperar?.classList.add('hidden');
+        loginForm?.classList.remove('hidden');
+        btnSubmitLogin?.classList.remove('hidden');
+        const erroDiv = document.getElementById('loginErro');
+        if (erroDiv) erroDiv.innerText = "";
+    });
 
     // Gerir modal estático de primeiro acesso
     abrirModalBtn?.addEventListener('click', (e) => {
@@ -63,14 +99,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Submissão do Login normal estático
+    // Submissão do Login normal estático (Com suporte a Admin sem senha)
     loginForm?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const senha = document.getElementById('loginSenha').value;
+        const emailInput = document.getElementById('loginEmail');
+        const senhaInput = document.getElementById('loginSenha');
         const erroDiv = document.getElementById('loginErro');
         
+        if (!emailInput) return;
+        const email = emailInput.value.trim();
+        const senha = senhaInput ? senhaInput.value : '';
+
         if (erroDiv) erroDiv.innerText = "A entrar...";
+
+        // Se for e-mail de Administrador oficial, ignora a senha e entra direto
+        if (isAdminEmail(email)) {
+            const mockUserAdmin = {
+                id: "admin-bypass-" + email,
+                email: email,
+                user_metadata: { role: 'admin', full_name: email.split('@')[0] }
+            };
+            localStorage.setItem('adore_logged_user', email);
+            verificarPermissaoAdmin(mockUserAdmin);
+            return;
+        }
+
+        // Caso contrário, executa o login padrão do Supabase
+        if (!supabaseClient) {
+            if (erroDiv) erroDiv.innerText = "Erro: Supabase não configurado.";
+            return;
+        }
 
         const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
 
@@ -83,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Botão de Logout global
     document.getElementById('btnLogout')?.addEventListener('click', async () => {
+        localStorage.removeItem('adore_logged_user');
         if (supabaseClient) await supabaseClient.auth.signOut();
         window.location.reload();
     });
@@ -140,16 +199,29 @@ async function loginComGoogle() {
 
 // Função de Login via E-mail acionada pelo modal dinâmico
 async function executarLoginDinamico() {
-    const email = document.getElementById('authEmail')?.value;
+    const email = document.getElementById('authEmail')?.value.trim();
     const senha = document.getElementById('authSenha')?.value;
     const erroDiv = document.getElementById('authModalErro');
 
-    if (!email || !senha) {
-        if (erroDiv) erroDiv.innerText = "Preencha o e-mail e a senha.";
+    if (!email) {
+        if (erroDiv) erroDiv.innerText = "Preencha o e-mail.";
         return;
     }
 
     if (erroDiv) erroDiv.innerText = "A autenticar...";
+
+    // Suporte a Admin sem senha no modal dinâmico
+    if (isAdminEmail(email)) {
+        const mockUserAdmin = {
+            id: "admin-bypass-" + email,
+            email: email,
+            user_metadata: { role: 'admin', full_name: email.split('@')[0] }
+        };
+        alert("Login de Administrador efetuado com sucesso!");
+        fecharModalGlobal();
+        verificarPermissaoAdmin(mockUserAdmin);
+        return;
+    }
 
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password: senha });
 
@@ -198,6 +270,17 @@ async function tratarRecuperacaoSenhaURL() {
 }
 
 async function verificarSessaoAtiva() {
+    // Se o utilizador já estiver gravado localmente como admin, valida automaticamente
+    const usuarioSalvo = localStorage.getItem('adore_logged_user');
+    if (usuarioSalvo && isAdminEmail(usuarioSalvo)) {
+        verificarPermissaoAdmin({
+            id: "admin-bypass-" + usuarioSalvo,
+            email: usuarioSalvo,
+            user_metadata: { role: 'admin', full_name: usuarioSalvo.split('@')[0] }
+        });
+        return;
+    }
+
     if (!supabaseClient) return;
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
@@ -209,13 +292,11 @@ function verificarPermissaoAdmin(user) {
     const metadata = user.user_metadata || {};
     const emailUser = user.email || "";
     
-    const isPermitido = metadata.role === 'admin' || emailUser.endsWith('@adore.com') || emailUser === "admin@adore.com" || user.id;
+    const isPermitido = isAdminEmail(emailUser) || metadata.role === 'admin' || emailUser.endsWith('@adore.com') || emailUser === "admin@adore.com" || user.id;
 
     if (isPermitido) {
-        // Atualiza o botão "Entrar" no topo para exibir o e-mail logado
         atualizarInterfaceUsuario(user);
 
-        // Revelar o painel, a barra lateral e o Krom se existirem IDs na página
         document.getElementById('loginSection')?.classList.add('hidden');
         document.getElementById('modalPrimeiroAcesso')?.classList.add('hidden');
         document.getElementById('sidebarNav')?.classList.remove('hidden');
@@ -233,7 +314,7 @@ function verificarPermissaoAdmin(user) {
     } else {
         const erroDiv = document.getElementById('loginErro');
         if (erroDiv) erroDiv.innerText = "Acesso negado: Conta sem privilégios.";
-        supabaseClient.auth.signOut();
+        if (supabaseClient) supabaseClient.auth.signOut();
     }
 }
 
@@ -251,6 +332,7 @@ function atualizarInterfaceUsuario(user) {
         userBadge.style.cssText = 'background: var(--bg-card); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 20px; font-size: 11px; display: flex; align-items: center; gap: 8px; color: var(--accent-green); cursor: pointer;';
         userBadge.title = 'Clique para Sair';
         userBadge.onclick = async () => {
+            localStorage.removeItem('adore_logged_user');
             if (supabaseClient) await supabaseClient.auth.signOut();
             window.location.reload();
         };
